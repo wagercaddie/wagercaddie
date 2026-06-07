@@ -1485,12 +1485,12 @@ return {
           runDiff += hd_val;
           const hCol = hd_val > 0 ? '#16a34a' : hd_val < 0 ? '#ef4444' : 'var(--mid-gray)';
           const diffStr = hd_val > 0 ? '+'+hd_val : hd_val === 0 ? 'E' : ''+hd_val;
-          const aName = shortName(aInfo.player);
-          const bName = shortName(bInfo.player);
+          const aName = aInfo.player || '—';
+          const bName = bInfo.player || '—';
           // Dot indicator: check if score differs from gross (net stroke applied)
           // Dot: show when player received a stroke (net < gross due to delta HI)
-          const aGross = hd.players[aInfo.player] ? hd.players[aInfo.player].gross[h] : null;
-          const bGross = hd.players[bInfo.player] ? hd.players[bInfo.player].gross[h] : null;
+          const aGross = (!aInfo.tied && hd.players[aInfo.player]) ? hd.players[aInfo.player].gross[h] : null;
+          const bGross = (!bInfo.tied && hd.players[bInfo.player]) ? hd.players[bInfo.player].gross[h] : null;
           const aDot = (aGross !== null && aInfo.score !== null && aInfo.score < aGross);
           const bDot = (bGross !== null && bInfo.score !== null && bInfo.score < bGross);
           const runCol = runDiff > 0 ? '#16a34a' : runDiff < 0 ? '#ef4444' : 'var(--mid-gray)';
