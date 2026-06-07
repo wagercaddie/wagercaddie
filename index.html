@@ -1771,7 +1771,7 @@ function renderPopsPlayerGrids() {
       <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:3px">
         ${SI_ORDER.map(h => {
           const hole = h+1;
-          const si = window._siIndex ? window._siIndex[h] : STROKE_INDEX ? STROKE_INDEX[h] : '';
+          const si = '';
           return `<label style="display:flex;flex-direction:column;align-items:center;cursor:pointer">
             <input type="checkbox" data-player="${p}" data-hole="${h}" style="margin-bottom:2px">
             <span style="font-size:calc(9px * var(--scale));color:var(--mid-gray)">${hole}</span>
