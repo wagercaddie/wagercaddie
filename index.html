@@ -1457,14 +1457,22 @@ function renderPairingBets(bets, betGroups) {
           return g - stroke;
         };
 
-        const bbInfo = (players, h) => {
-          let best = null, bestPlayer = null;
-          players.forEach(p => {
-            const s = netScore(p, h);
-            if (s !== null && (best === null || s < best)) { best = s; bestPlayer = p; }
-          });
-          return {score: best, player: bestPlayer};
-        };
+const bbInfo = (players, h) => {
+let best = null, bestPlayers = [];
+players.forEach(p => {
+  const s = netScore(p, h);
+  if (s !== null) {
+    if (best === null || s < best) { best = s; bestPlayers = [p]; }
+    else if (s === best) { bestPlayers.push(p); }
+  }
+});
+const shortN = n => n.split(',')[0].trim();
+return {
+  score: best,
+  player: bestPlayers.length > 1 ? bestPlayers.map(shortN).join('/') : bestPlayers[0] || null,
+  tied: bestPlayers.length > 1
+};
+};
 
         let rows = '';
         let runDiff = 0;
