@@ -1607,22 +1607,24 @@ function renderTeamChecklists() {
     if (!container) return;
     const other = team === 'a' ? pairingTeamB : pairingTeamA;
     const mine = team === 'a' ? pairingTeamA : pairingTeamB;
-    const shortN = n => n.split(',')[0].trim();
     container.innerHTML = sortByLastName(players).map(p => {
       const inOther = other.indexOf(p.name) > -1;
       const inMine = mine.indexOf(p.name) > -1;
-      const disabled = inOther;
-      return `<div class="player-check-item${inMine?' checked':''}${disabled?' disabled':''}"
-        style="${disabled?'opacity:0.35;pointer-events:none':''};min-height:calc(40px * var(--scale));padding:6px 12px;"
-        onclick="togglePairingPlayer('${team}','${p.name.replace(/'/g,"\\'")}',this)">
-        <div class="check-box" style="width:24px;height:24px">${inMine?'✓':''}</div>
-        <div class="player-check-name" style="font-size:calc(15px * var(--scale))">${p.name}</div>
-        ${p.handicap != null ? `<span class="player-check-hdcp">${p.handicap > 0 ? '+' : ''}${p.handicap}</span>` : ''}
-      </div>`;
+      const disabledStyle = inOther ? 'opacity:0.35;pointer-events:none;' : '';
+      const checkedClass = inMine ? ' checked' : '';
+      const checkMark = inMine ? '✓' : '';
+      const hdcpHtml = p.handicap != null ? '<span class="player-check-hdcp">' + (p.handicap > 0 ? '+' : '') + p.handicap + '</span>' : '';
+      const safeName = p.name.replace(/'/g, "\\'");
+      return '<div class="player-check-item' + checkedClass + '" ' +
+        'style="' + disabledStyle + 'min-height:calc(40px * var(--scale));padding:6px 12px;" ' +
+        'onclick="togglePairingPlayer(\'' + team + '\',\'' + safeName + '\',this)">' +
+        '<div class="check-box" style="width:24px;height:24px">' + checkMark + '</div>' +
+        '<div class="player-check-name" style="font-size:calc(15px * var(--scale))">' + p.name + '</div>' +
+        hdcpHtml +
+        '</div>';
     }).join('');
   });
 }
-
 function togglePairingPlayer(team, name, el) {
   const arr = team === 'a' ? pairingTeamA : pairingTeamB;
   const other = team === 'a' ? pairingTeamB : pairingTeamA;
