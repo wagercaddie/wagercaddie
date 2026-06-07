@@ -25,25 +25,7 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-YZM5EEGK72');
-// Pre-fetch all config at startup to avoid individual getConfig calls
-callScript('getAllConfig').then(function(r) {
-  if (r && r.config) window._config = r.config;
-}).catch(function(){});
 
-// Start auto-refresh immediately at app load — runs every 2 min regardless of tab
-startAutoRefresh();
-
-// Restore last active tab on page load
-(function() {
-  const saved = sessionStorage.getItem('activeTab');
-  if (saved && saved !== 'bet' && saved !== 'admin' && saved !== 'season') {
-    // Wait for app to initialize, then switch tab
-    setTimeout(function() {
-      const tabEl = document.getElementById('tab-' + saved);
-      if (tabEl) showScreen(saved, tabEl);
-    }, 800);
-  }
-})();
 </script>
 <title>WagerCaddie</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -952,7 +934,6 @@ startAutoRefresh();
 
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxIWTl0j_wWZoTkAxctW5Dt14VbTDZLA-zCnspdgGBDbwTaaLWf_aEiYBVngczVz-iuEg/exec';
-const ADMIN_PIN = '4321';
 const APP_VERSION = 'v12.80';
 
 // Register service worker for PWA
@@ -968,7 +949,7 @@ if ('serviceWorker' in navigator) {
 setTimeout(() => {
   const loading = document.getElementById('bet-loading');
   if (loading && loading.style.display !== 'none' && loading.innerHTML.indexOf('spinner') > -1) {
-    loading.innerHTML = `<div class="empty-state"><div class="empty-icon">⏱️</div><div class="empty-text">Taking too long to load.<br><span style="font-size:calc(12px * var(--scale));color:var(--mid-gray)">Check your connection or ask admin to load a round.</span></div><button onclick="loadBetScreen()" style="margin-top:12px;background:var(--green);color:white;border:none;padding:10px 20px;border-radius:8px;font-size:calc(14px * var(--scale));cursor:pointer">↻ Try Again</button></div>`;
+    loading.innerHTML = `<div class="empty-state"><div class="empty-icon">⏱️</div><div class="empty-text">Taking too long to load.<br><span style="font-size:calc(12px * var(--scale));color:var(--mid-gray)">No round is loaded yet — ask your admin to go to the Admin tab and load today's round.</span></div><button onclick="loadBetScreen()" style="margin-top:12px;background:var(--green);color:white;border:none;padding:10px 20px;border-radius:8px;font-size:calc(14px * var(--scale));cursor:pointer">↻ Try Again</button></div>`;
   }
 }, 60000);
 
@@ -982,7 +963,7 @@ let indiePlayers = []; // {name, sign, amount}
 let roundSelectorsLoaded = false; // cache flag — only fetch once per session
 let roundFormat = 'nassau';           // 'nassau' or 'bestball' — set on round load
 let settlementCacheTime = 0; resultsCacheTime = 0; sessionStorage.removeItem('live_results_cache');      // timestamp of last settlement fetch
-let settlePaidKey = '';           // Config key for current round paid state
+let settlePaidKey = '';           // Config key scoped to round date — prevents cross-round bleed
 let settlePaidSet = new Set();    // Set of 'From→To' strings that are checked
 
 // ── ANALYTICS ──
@@ -1036,6 +1017,7 @@ function showScreen(name, tab) {
 
 function startAutoRefresh() {
   stopAutoRefresh();
+  if (roundLocked) return;
   // Only auto-refresh during active rounds (not finalized, not locked)
   // 5 min interval — well within Apps Script quota
   // Uses callScript directly to bypass the frontend throttle check
@@ -1069,14 +1051,25 @@ function checkAdminAccess() {
   document.getElementById('pin-overlay').classList.add('show');
   setTimeout(() => document.getElementById('pin-input').focus(), 200);
 }
-function checkPin() {
-  if (document.getElementById('pin-input').value === ADMIN_PIN) {
-    sessionStorage.setItem('admin_unlocked', 'true');
-    document.getElementById('pin-overlay').classList.remove('show');
+async function checkPin() {
+  const pin = document.getElementById('pin-input').value;
+  if (!pin) return;
+  try {
+    const r = await callScript('validatePin', {pin});
+    if (r && r.valid) {
+      sessionStorage.setItem('admin_unlocked', 'true');
+      document.getElementById('pin-overlay').classList.remove('show');
+      document.getElementById('pin-input').value = '';
+      document.getElementById('pin-error').style.display = 'none';
+      openAdminScreen();
+    } else {
+      document.getElementById('pin-error').style.display = 'block';
+      document.getElementById('pin-input').value = '';
+    }
+  } catch(e) {
+    showToast('PIN check failed — check connection', 'error');
     document.getElementById('pin-input').value = '';
-    document.getElementById('pin-error').style.display = 'none';
-    openAdminScreen();
-  } else { document.getElementById('pin-error').style.display = 'block'; document.getElementById('pin-input').value = ''; }
+  }
 }
 function openAdminScreen() {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -3474,9 +3467,11 @@ async function renderBBBreakdowns(teams, playerTotals) {
 
 // ── SETTLEMENT PAID CHECKBOXES ──
 function getSettlePaidKey() {
-  // Key per round date — cleared when new round loads
-  const roundDate = settlePaidKey || 'current';
-  return 'settle_paid_' + roundDate;
+  // Key scoped to round date AND results data to prevent cross-round bleed
+  const roundDate = (window._resultsData && window._resultsData.roundDate) 
+    ? window._resultsData.roundDate 
+    : (settlePaidKey || 'current');
+  return 'settle_paid_v2_' + roundDate;
 }
 
 async function loadSettlePaid(roundDate) {
@@ -4293,14 +4288,10 @@ function setSize(size) {
 const savedSize = localStorage.getItem('text_size') || 'normal';
 setSize(savedSize);
 
-// ── MOBILE DETECTION — boost scale on phones ──
-// Apps Script always serves inside an iframe, so we can't exclude iframes.
-// Instead, detect by screen width + touch capability.
+// ── MOBILE DETECTION — uses touch capability, not screen width ──
 (function() {
-  const isMobile = (window.innerWidth <= 500 || screen.width <= 500) && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-  if (isMobile) {
-    document.body.classList.add('mobile-device');
-  }
+  const isMobile = navigator.maxTouchPoints > 1 || ('ontouchstart' in window);
+  if (isMobile) document.body.classList.add('mobile-device');
 })();
 
 // ── PULL TO REFRESH — disabled to fix scroll issues ──
@@ -4822,9 +4813,27 @@ async function loadGolfGeniusLeaderboard() {
 }
 
 
-// ── INIT ──
-loadBetScreen();
-document.getElementById('version-display').textContent = APP_VERSION;
+// ── INIT — runs after DOM is ready ──
+(function init() {
+  // Set version display
+  const vd = document.getElementById('version-display');
+  if (vd) vd.textContent = APP_VERSION;
+
+  // Pre-fetch config
+  callScript('getAllConfig').then(function(r) {
+    if (r && r.config) window._config = r.config;
+  }).catch(function(){});
+
+  // Restore last active tab
+  const saved = sessionStorage.getItem('activeTab');
+  if (saved && saved !== 'bet' && saved !== 'admin' && saved !== 'season') {
+    const tabEl = document.getElementById('tab-' + saved);
+    if (tabEl) showScreen(saved, tabEl);
+  }
+
+  // Load bet screen
+  loadBetScreen();
+})();
 
 // ── PWA INSTALL — only show when NOT in an iframe ──
 const isInFrame = window.self !== window.top;
