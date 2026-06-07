@@ -1448,7 +1448,13 @@ function renderPairingBets(bets, betGroups) {
           if (!pd || !pd.gross) return null;
           const g = pd.gross[h];
           if (g === null || g === undefined) return null;
-          if (hiPct === 0) return g;
+          if (hiPct === 0) {
+          const pops = origBet.pops;
+          if (pops && typeof pops === 'object' && Array.isArray(pops[p])) {
+            return pops[p].indexOf(h) > -1 ? g - 1 : g;
+          }
+          return g;
+        }
           // Delta HI: player gets strokes based on (their HCP - lowest HCP) * hiPct/100
           const hcp = Math.abs(pd.handicap || 0);
           const deltaHcp = Math.round((hcp - baseHcp) * hiPct / 100);
