@@ -415,7 +415,7 @@
           <div class="warning-box" id="chall-warning"></div>
           </div><!-- end chall-name-section -->
         </div><!-- end challenger-flow inner -->
-        <button class="btn btn-primary" id="submit-btn" onclick="showConfirm()" style="margin-top:16px" disabled>Review &amp; Submit</button>
+        <button class="btn btn-primary" id="submit-btn" onclick="showConfirm()" style="margin-top:16px" disabled>Submit Bet</button>
       </div>
       <div id="finalize-section" style="display:none;margin:0 12px 12px">
         <button class="btn btn-gold" onclick="showFinalizeConfirm()" style="margin-top:0">🏌️ Finalize Bets</button>
@@ -2190,7 +2190,7 @@ async function submitBet() {
     }
     else{showToast(r.error||'Error','error');btn.disabled=false;}
   }catch(e){showToast(e.message,'error');btn.disabled=false;}
-  btn.textContent='Review & Submit';
+  btn.textContent='Submit Bet';
 }
 
 async function deleteBet(betId, rowIndex) {
