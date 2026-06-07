@@ -384,6 +384,7 @@
     <div id="bet-content" style="display:none">
       <div class="card">
         <div class="card-title">Sign Up for Today's Bet</div>
+        <div id="bet-count-display" style="display:none;font-size:calc(12px * var(--scale));color:var(--gray);margin-bottom:8px;padding:6px 10px;background:var(--cream);border-radius:8px;text-align:center"></div>
         <span class="field-label mt-0">Step 1 — Wheel or Challenger?</span>
         <div class="role-selector">
           <div class="role-btn" id="role-wheel" onclick="selectRole('wheel')"><div class="role-icon">🎡</div><div class="role-label">Wheel</div></div>
@@ -2468,10 +2469,16 @@ async function loadTodaysBets() {
     currentBetsData = data; // Store for self-delete re-render
     const challBets=bets.filter(b=>!b.isWheel);
 
-    // Update bet count badge
-    const badge = document.getElementById('bet-count-badge');
-    if (badge) badge.textContent = challBets.length + ' bet' + (challBets.length !== 1 ? 's' : '');
-
+    // Update bet count display on card
+const betCountDisplay = document.getElementById('bet-count-display');
+if (betCountDisplay) {
+  if (challBets.length > 0) {
+    betCountDisplay.textContent = challBets.length + ' bet' + (challBets.length !== 1 ? 's' : '') + ' submitted so far';
+    betCountDisplay.style.display = 'block';
+  } else {
+    betCountDisplay.style.display = 'none';
+  }
+}
     // Populate self-delete player selector if not finalized/locked
     const sdSel = document.getElementById('self-delete-player');
     const sdDiv = document.getElementById('self-delete-selector');
