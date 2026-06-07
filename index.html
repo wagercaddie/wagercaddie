@@ -344,7 +344,13 @@
       <span id="bet-banner-text"></span>
       <button onclick="dismissBetBanner()" style="position:absolute;top:8px;right:10px;background:transparent;border:none;color:rgba(255,255,255,0.75);font-size:calc(18px * var(--scale));cursor:pointer;line-height:1">✕</button>
     </div>
-    <div id="format-pill" style="display:none;text-align:center;padding:4px 0 2px;font-size:calc(12px * var(--scale));font-weight:600;letter-spacing:1px;color:var(--mid-gray)"></div>
+    <div id="round-date-pill" style="display:none;background:var(--green-dark);border-radius:10px;padding:8px 14px;margin-bottom:10px;flex-direction:row;align-items:center;justify-content:space-between;">
+  <div>
+    <div style="font-size:calc(10px * var(--scale));color:rgba(255,255,255,0.5);letter-spacing:1px;text-transform:uppercase">Active Round</div>
+    <div id="round-date-display" style="font-family:'Bebas Neue',sans-serif;font-size:calc(20px * var(--scale));color:var(--gold);letter-spacing:1px">—</div>
+  </div>
+  <div id="round-format-display" style="font-size:calc(11px * var(--scale));color:rgba(255,255,255,0.6)"></div>
+</div>
     <div id="bet-loading" class="loading"><div class="spinner"></div><div>Loading...</div></div>
     <!-- BETS FINALIZED BANNER -->
     <div id="bet-finalized" style="display:none;padding:12px">
@@ -415,7 +421,7 @@
           <div class="warning-box" id="chall-warning"></div>
           </div><!-- end chall-name-section -->
         </div><!-- end challenger-flow inner -->
-        <button class="btn btn-primary" id="submit-btn" onclick="showConfirm()" style="margin-top:16px" disabled>Submit Bet</button>
+        <button class="btn btn-primary" id="submit-btn" onclick="submitBet()" style="margin-top:16px" disabled>Submit Bet</button>
       </div>
       <div id="finalize-section" style="display:none;margin:0 12px 12px">
         <button class="btn btn-gold" onclick="showFinalizeConfirm()" style="margin-top:0">🏌️ Finalize Bets</button>
@@ -1132,81 +1138,91 @@ function sortByLastName(arr) {
 
 // ── BET SCREEN ──
 async function loadBetScreen() {
-  try {
-    const [data, fmtData, parsData] = await Promise.all([
-      callScript('getPlayers'),
-      callScript('getRoundFormat').catch(()=>({format:'nassau'})),
-      Promise.resolve({value:(window._config&&window._config['course_pars']!==undefined&&window._config['course_pars']!=='')?window._config['course_pars']:''}).catch(()=>({value:''}))
-    ]);
-    players = sortByLastName(data.players || []);
-    roundLocked = data.locked || false;
-    betsFinal = data.betsFinal || false;
-    roundFormat = (fmtData && fmtData.format) ? fmtData.format : 'nassau';
-    // Show format pill on Bet tab
-    const pill = document.getElementById('format-pill');
-    if (pill) {
-      pill.textContent = roundFormat === 'bestball' ? '⛳ Best Ball · 100% HI' : '🏌️ Nassau · 80% HI';
-      pill.style.display = 'block';
+  const safetyTimer = setTimeout(() => {
+    const loading = document.getElementById('bet-loading');
+    if (loading && loading.style.display !== 'none') {
+      loading.innerHTML = `<div class="empty-state"><div class="empty-icon">⏱️</div><div class="empty-text">Taking too long to load.<br><span style="font-size:calc(12px * var(--scale));color:var(--mid-gray)">No round is loaded yet — ask your admin to go to the Admin tab and load today's round.</span></div><button onclick="loadBetScreen()" style="margin-top:12px;background:var(--green);color:white;border:none;padding:10px 20px;border-radius:8px;font-size:calc(14px * var(--scale));cursor:pointer">↻ Try Again</button></div>`;
     }
-    // Parse course pars from config — falls back to Crown Colony if not set
-    if (parsData && parsData.value) {
-      const parsed = parsData.value.split(',').map(Number).filter(n => n > 0);
+  }, 60000);
+
+  try {
+    const everything = await callScript('getEverything');
+    clearTimeout(safetyTimer);
+
+    players = sortByLastName(everything.players || []);
+    roundLocked = everything.locked || false;
+    betsFinal = everything.betsFinal || false;
+    roundFormat = everything.format || 'nassau';
+
+    // Parse course pars
+    if (everything.coursePars) {
+      const parsed = everything.coursePars.split(',').map(Number).filter(n => n > 0);
       if (parsed.length === 18) window._coursePars = parsed;
     }
+
+    // Show round date pill
+    if (everything.roundDate) {
+      const pill = document.getElementById('round-date-pill');
+      const dateDisplay = document.getElementById('round-date-display');
+      const fmtDisplay = document.getElementById('round-format-display');
+      if (pill) {
+        dateDisplay.textContent = everything.roundDate;
+        fmtDisplay.textContent = roundFormat === 'bestball' ? '⛳ Best Ball · 100% HI' : '🏌️ Nassau · 80% HI';
+        pill.style.display = 'flex';
+      }
+      const indieDate = document.getElementById('indie-date');
+      if (indieDate) indieDate.value = everything.roundDate;
+    }
+
     document.getElementById('bet-loading').style.display = 'none';
+
     if (roundLocked) {
       document.getElementById('bet-locked').style.display = 'block';
       document.getElementById('bet-finalized').style.display = 'none';
-      const lbl = document.getElementById('locked-bets-list');
-      if (lbl) lbl.innerHTML = '';
-      callScript('getRoundStatus').then(rs => {
-        if (rs && rs.lockedAt) {
-          const el = document.getElementById('locked-at-display');
-          if (el) el.textContent = 'Locked: ' + rs.lockedAt;
-        }
-      }).catch(()=>{});
+      if (everything.lockedAt) {
+        const el = document.getElementById('locked-at-display');
+        if (el) el.textContent = 'Locked: ' + everything.lockedAt;
+      }
       loadLockedBets();
     } else if (betsFinal) {
       document.getElementById('bet-finalized').style.display = 'block';
       document.getElementById('bet-locked').style.display = 'none';
       document.getElementById('bet-content').style.display = 'none';
-      callScript('getRoundStatus').then(rs => {
-        if (rs && rs.lockedAt) {
-          const el = document.getElementById('finalized-at-display');
-          if (el) el.textContent = 'Finalized: ' + rs.lockedAt;
-        }
-      }).catch(()=>{});
+      if (everything.lockedAt) {
+        const el = document.getElementById('finalized-at-display');
+        if (el) el.textContent = 'Finalized: ' + everything.lockedAt;
+      }
       loadFinalizedBets();
       setTimeout(loadBetTracker, 400);
     } else {
       document.getElementById('bet-locked').style.display = 'none';
       document.getElementById('bet-finalized').style.display = 'none';
       document.getElementById('bet-content').style.display = 'block';
-      // Show finalize button only when there are bets
       const fs = document.getElementById('finalize-section');
       if (fs) fs.style.display = 'block';
       const os = document.getElementById('open-section');
       if (os) os.style.display = 'none';
+      startAutoRefresh();
     }
-    if (data.date) {
-      const indieDate = document.getElementById('indie-date');
-      if (indieDate) indieDate.value = data.date;
-    }
+
     ['add-p1','add-p2'].forEach(id => {
       const sel = document.getElementById(id);
       if (!sel) return;
+      sel.innerHTML = '<option value="">Select player...</option>';
       players.forEach(p => { sel.innerHTML += `<option value="${p.name}">${p.name}</option>`; });
     });
+
     loadTodaysBets();
     buildIndiePlayerList();
     setTimeout(loadBetBanner, 0);
-    // Tracker: only fire automatically when round is finalized or locked;
-    // during active betting it fires on explicit score refresh only
-    setTimeout(loadBetTracker, 300); // load tracker in all round states
+    setTimeout(loadBetTracker, 300);
+
     setInterval(() => {
       if (!betsFinal && !roundLocked && !selectedRole && document.getElementById('screen-bet').classList.contains('active')) loadTodaysBets();
     }, 60000);
+
   } catch(e) {
+    clearTimeout(safetyTimer);
     console.error('loadBetScreen error:', e);
     document.getElementById('bet-loading').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Could not load players.<br><span style="font-size:calc(12px * var(--scale));color:var(--mid-gray)">${e.message||'Network error'}</span><br><br>Ask admin to load today's round.</div><button onclick="loadBetScreen()" style="margin-top:12px;background:var(--green);color:white;border:none;padding:10px 20px;border-radius:8px;font-size:calc(14px * var(--scale));cursor:pointer">↻ Try Again</button></div>`;
   }
