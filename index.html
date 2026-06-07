@@ -1859,7 +1859,7 @@ async function submitPairingBet() {
       hi_pct: pairingHI,
       auto_press: pairingAutoPress,
       press_threshold: threshold,
-      pops: buildPopsPayload(),
+      pops: JSON.stringify(buildPopsPayload() || {}),
     });
     if (r.success) {
       closePairingModal();
