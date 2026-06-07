@@ -775,23 +775,15 @@
       <button id="fmt-fbl" onclick="setPairingFormat('fbl')" class="btn btn-outline btn-sm" style="flex:1">F/B/Long</button>
     </div>
 
-    <!-- Team A -->
-    <span class="field-label">Team A</span>
-    <div id="team-a-players" style="margin-bottom:6px"></div>
-    <div class="select-wrap" style="margin-bottom:12px">
-      <select id="add-player-a" onchange="addPlayerToTeam('a')">
-        <option value="">+ Add player to Team A...</option>
-      </select>
-    </div>
+   <!-- Team A -->
+  <span class="field-label">Team A</span>
+  <div id="team-a-players" style="margin-bottom:6px"></div>
+  <div id="team-a-checklist" style="margin-bottom:12px"></div>
 
-    <!-- Team B -->
-    <span class="field-label">Team B</span>
-    <div id="team-b-players" style="margin-bottom:6px"></div>
-    <div class="select-wrap" style="margin-bottom:12px">
-      <select id="add-player-b" onchange="addPlayerToTeam('b')">
-        <option value="">+ Add player to Team B...</option>
-      </select>
-    </div>
+  <!-- Team B -->
+  <span class="field-label">Team B</span>
+  <div id="team-b-players" style="margin-bottom:6px"></div>
+  <div id="team-b-checklist" style="margin-bottom:12px"></div>
 
     <!-- Amount -->
     <span class="field-label">$ Per Player Per Nine</span>
@@ -1594,27 +1586,51 @@ async function openCreatePairingBet() {
   document.getElementById('pairing-amount').value = '';
   document.getElementById('pairing-error').style.display = 'none';
 
-  // Populate player dropdowns
-  const allPlayers = sortByLastName(players);
-  ['add-player-a','add-player-b'].forEach(id => {
-    const sel = document.getElementById(id);
-    sel.innerHTML = '<option value="">+ Add player...</option>';
-    allPlayers.forEach(p => {
-      sel.innerHTML += `<option value="${p.name}">${p.name}</option>`;
-    });
-  });
+  // Build checklist for both teams
+  renderTeamChecklists();
   renderTeamPills();
   updateNetZero();
+
   // Reset pops section
   document.querySelectorAll('#pops-player-grids input, .hi-exclude-check').forEach(cb => cb.checked = false);
   renderPopsSection();
 
-  // Re-enable submit button in case disabled from previous submission
+  // Re-enable submit button
   const _sb = document.querySelector('#pairing-modal .btn-primary');
   if (_sb) { _sb.disabled = false; _sb.textContent = 'Create Bet'; }
   document.getElementById('pairing-modal').style.display = 'flex';
 }
 
+function renderTeamChecklists() {
+  ['a','b'].forEach(team => {
+    const container = document.getElementById('team-'+team+'-checklist');
+    if (!container) return;
+    const other = team === 'a' ? pairingTeamB : pairingTeamA;
+    const mine = team === 'a' ? pairingTeamA : pairingTeamB;
+    const shortN = n => n.split(',')[0].trim();
+    container.innerHTML = sortByLastName(players).map(p => {
+      const inOther = other.indexOf(p.name) > -1;
+      const inMine = mine.indexOf(p.name) > -1;
+      const disabled = inOther;
+      return `<div class="player-check-item${inMine?' checked':''}${disabled?' disabled':''}"
+        style="${disabled?'opacity:0.35;pointer-events:none':''};min-height:calc(40px * var(--scale));padding:6px 12px;"
+        onclick="togglePairingPlayer('${team}','${p.name.replace(/'/g,"\\'")}',this)">
+        <div class="check-box" style="width:24px;height:24px">${inMine?'✓':''}</div>
+        <div class="player-check-name" style="font-size:calc(15px * var(--scale))">${p.name}</div>
+        ${p.handicap != null ? `<span class="player-check-hdcp">${p.handicap > 0 ? '+' : ''}${p.handicap}</span>` : ''}
+      </div>`;
+    }).join('');
+  });
+}
+
+function togglePairingPlayer(team, name, el) {
+  const arr = team === 'a' ? pairingTeamA : pairingTeamB;
+  const other = team === 'a' ? pairingTeamB : pairingTeamA;
+  if (other.indexOf(name) > -1) return; // already on other team
+  const idx = arr.indexOf(name);
+  if (idx > -1) {
+    arr.splice(idx, 1);
+    el.clas
 function closePairingModal() {
   document.getElementById('pairing-modal').style.display = 'none';
 }
@@ -1647,22 +1663,6 @@ function setPairingAutoPress(on) {
   document.getElementById('autopress-off').style.background = !on ? 'var(--green)' : '';
   document.getElementById('autopress-off').style.color = !on ? 'white' : '';
   document.getElementById('press-threshold').style.opacity = on ? '1' : '0.4';
-}
-
-function addPlayerToTeam(team) {
-  const selId = team === 'a' ? 'add-player-a' : 'add-player-b';
-  const sel = document.getElementById(selId);
-  const name = sel.value;
-  if (!name) return;
-  sel.value = '';
-  const arr = team === 'a' ? pairingTeamA : pairingTeamB;
-  const other = team === 'a' ? pairingTeamB : pairingTeamA;
-  if (arr.indexOf(name) > -1) { showToast('Already on this team', 'error'); return; }
-  if (other.indexOf(name) > -1) { showToast('Already on the other team', 'error'); return; }
-  arr.push(name);
-  renderTeamPills();
-  updateNetZero();
-  renderPopsSection();
 }
 
 function removeFromTeam(team, name) {
