@@ -1763,7 +1763,8 @@ function renderPopsPlayerGrids() {
   const SI_ORDER = [8,0,2,4,10,12,6,14,16, 9,17,15,13,11,1,3,5,7]; // sorted by SI hardest first (0-indexed)
 
   container.innerHTML = allPlayers.map(p => {
-    const short = p.split(',')[0].trim();
+    const parts = p.split(',');
+    const short = parts.length > 1 ? parts[0].trim() + ', ' + parts[1].trim().split(' ')[1] : p;
     const pd = window._holeData && window._holeData.players && window._holeData.players[p];
     const hcp = pd ? (pd.handicap || 0) : 0;
     return `<div style="margin-bottom:10px">
