@@ -1,7 +1,7 @@
 // WagerCaddie Service Worker
 // Caches app shell for fast loads. Data always fetched live from GAS.
 
-const CACHE_NAME = 'wagercaddie-v3';
+const CACHE_NAME = 'wagercaddie-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
