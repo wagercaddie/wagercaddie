@@ -2435,6 +2435,11 @@ async function loadLockedBets() {
 
 // ── BET RECEIPT ──
 function showReceipt(lines) {
+  // Auto-scroll to receipt
+  setTimeout(() => {
+    const section = document.getElementById('todays-bets-section');
+    if (section) section.scrollIntoView({behavior: 'smooth', block: 'start'});
+  }, 300);
   const existing = document.getElementById('bet-receipt');
   if (existing) existing.remove();
   const div = document.createElement('div');
