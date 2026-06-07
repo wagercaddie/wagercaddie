@@ -1626,14 +1626,24 @@ function renderTeamChecklists() {
 function togglePairingPlayer(team, name, el) {
   const arr = team === 'a' ? pairingTeamA : pairingTeamB;
   const other = team === 'a' ? pairingTeamB : pairingTeamA;
-  if (other.indexOf(name) > -1) return; // already on other team
+  if (other.indexOf(name) > -1) return;
   const idx = arr.indexOf(name);
   if (idx > -1) {
     arr.splice(idx, 1);
-    el.clas
-function closePairingModal() {
-  document.getElementById('pairing-modal').style.display = 'none';
+    el.classList.remove('checked');
+    el.querySelector('.check-box').textContent = '';
+  } else {
+    arr.push(name);
+    el.classList.add('checked');
+    el.querySelector('.check-box').textContent = '✓';
+  }
+  renderTeamChecklists();
+  renderTeamPills();
+  updateNetZero();
+  renderPopsSection();
 }
+
+function closePairingModal() {
 
 function setPairingFormat(fmt) {
   pairingFormat = fmt;
