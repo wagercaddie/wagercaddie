@@ -4852,12 +4852,12 @@ async function loadGolfGeniusLeaderboard() {
     if (r && r.config) window._config = r.config;
   }).catch(function(){});
 
-  // Restore last active tab
-  const saved = sessionStorage.getItem('activeTab');
-  if (saved && saved !== 'bet' && saved !== 'admin' && saved !== 'season') {
-    const tabEl = document.getElementById('tab-' + saved);
-    if (tabEl) showScreen(saved, tabEl);
-  }
+ // Restore last active tab
+const saved = sessionStorage.getItem('activeTab');
+if (saved && saved !== 'admin' && saved !== 'season') {
+  const tabEl = document.getElementById('tab-' + saved);
+  if (tabEl) showScreen(saved, tabEl);
+}
 
   // Load bet screen
   loadBetScreen();
