@@ -1546,7 +1546,7 @@ const bbInfo = (players, h) => {
       const d = (b.finalDiff !== null && b.finalDiff !== undefined) ? b.finalDiff
                 : (b.result === 'A' ? 1 : b.result === 'B' ? -1 : 0);
       const amtA = b.amount, amtB = b.amountB || b.amount;
-      return sum + (d > 0 ? amtA : d < 0 ? -amtB : 0);
+      return sum + (d > 0 ? amtA : d < 0 ? -amtA : 0);
     }, 0);
     const totalCls = totalNet > 0 ? '#16a34a' : totalNet < 0 ? '#ef4444' : 'rgba(255,255,255,0.6)';
     const totalFmt = totalNet > 0 ? '+$'+totalNet : totalNet < 0 ? '-$'+Math.abs(totalNet) : '$0';
@@ -2685,10 +2685,12 @@ function renderMyRound(playerName) {
     : 'Not started';
 
   // ── Money totals ──
-  const wheelAmt = playerTotals[playerName] || 0;
-  const skinsAmt = playerTotals[playerName+'_skins'] || 0;
-  const indieAmt = indieTotals[playerName] || 0;
-  const netAmt   = wheelAmt + skinsAmt + indieAmt;
+  const pairingTotals = resultsData.pairingTotals || {};
+  const wheelAmt  = playerTotals[playerName] || 0;
+  const skinsAmt  = playerTotals[playerName+'_skins'] || 0;
+  const indieAmt  = indieTotals[playerName] || 0;
+  const pairingAmt = pairingTotals[playerName] || 0;
+  const netAmt    = wheelAmt + skinsAmt + indieAmt + pairingAmt;
 
   const fmtAmt = n => n > 0 ? '+$'+n : n < 0 ? '-$'+Math.abs(n) : '$0';
   const colAmt = n => n > 0 ? '#16a34a' : n < 0 ? '#ef4444' : 'var(--mid-gray)';
@@ -2711,7 +2713,7 @@ function renderMyRound(playerName) {
   const shareText = () => {
     const lines = [
       playerName + (thru > 0 ? ' — Thru '+thru+(toParFmt?' ('+toParFmt+')':'') : ''),
-      'Net: '+fmtAmt(netAmt)+' | Wheel: '+fmtAmt(wheelAmt)+' | Skins: '+fmtAmt(skinsAmt)+' | Indie: '+fmtAmt(indieAmt),
+      'Net: '+fmtAmt(netAmt)+' | Wheel: '+fmtAmt(wheelAmt)+' | Skins: '+fmtAmt(skinsAmt)+' | Indie: '+fmtAmt(indieAmt)+(pairingAmt?'| 2-Down: '+fmtAmt(pairingAmt):''),
     ];
     if (mySkinsHoles.length) lines.push('Skins: '+mySkinsHoles.join(', '));
     navigator.clipboard.writeText(lines.join('\n')).then(()=>showToast('Copied!','success')).catch(()=>showToast('Copy failed','error'));
@@ -2869,6 +2871,7 @@ function renderMyRound(playerName) {
     tile('WHEEL', fmtAmt(wheelAmt), colAmt(wheelAmt), '') +
     tile('SKINS', fmtAmt(skinsAmt), colAmt(skinsAmt), mySkinsHoles.length?mySkinsHoles.join(' '):'') +
     tile('INDIE', fmtAmt(indieAmt), colAmt(indieAmt), '') +
+    (pairingAmt !== 0 || pairingBets.some(b=>b.teamsA.split('|').map(p=>p.trim()).includes(playerName)||b.teamsB.split('|').map(p=>p.trim()).includes(playerName)) ? tile('2-DOWN', fmtAmt(pairingAmt), colAmt(pairingAmt), '') : '') +
     `</div>` +
     // Wheel bets (grouped, collapsed)
     `<div style="font-size:calc(10px * var(--scale));font-weight:700;color:var(--mid-gray);letter-spacing:0.5px;margin-bottom:4px">WHEEL BETS</div>` +
