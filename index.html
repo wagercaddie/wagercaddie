@@ -3265,7 +3265,7 @@ async function renderResults() {
           <span class="lb-score-inline">${fbInline}</span>
           <span class="lb-net-mobile" style="display:none;flex-direction:column;align-items:flex-end;margin-left:auto;gap:1px">
             <span style="font-family:'Bebas Neue',sans-serif;font-size:calc(17px * var(--scale));letter-spacing:1px" class="${nCls}">${nFmt}</span>
-            <span style="font-size:calc(10px * var(--scale));color:var(--mid-gray)">W:${wFmt} S:${sFmt}${r.twodown!==0?' 2D:'+tdFmt:''}</span>
+            <span style="font-size:calc(10px * var(--scale));color:var(--mid-gray)">W:${wFmt} S:${sFmt}${r.indie!==0?' I:'+iFmt:''}${r.twodown!==0?' 2D:'+tdFmt:''}</span>
           </span>
         </span>
         <span class="lb-num-cell lb-col-hide">${fmt(r.wheel)}</span>
