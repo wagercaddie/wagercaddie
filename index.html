@@ -3640,12 +3640,11 @@ async function loadSettlePaid(roundDate) {
   } catch(e) {}
 }
 
-async function toggleSettlePaid(pairKey) {
-  const wasPaid = settlePaidSet.has(pairKey);
-  if (wasPaid) settlePaidSet.delete(pairKey); else settlePaidSet.add(pairKey);
-  // Re-render immediately from settlePaidSet state
+async function toggleSettlePaid(pi) {
+  const key = window._settleKeys && window._settleKeys[pi];
+  if (!key) return;
+  if (settlePaidSet.has(key)) settlePaidSet.delete(key); else settlePaidSet.add(key);
   if (settlementData) renderSettlement(settlementData);
-  // Persist to Config sheet
   try {
     const val = [...settlePaidSet].join(',');
     await callScript('setConfig', {key: getSettlePaidKey(), value: val});
@@ -3671,33 +3670,25 @@ function renderSettlement(data) {
   settleProjEl.style.display = settleHasPartial ? 'block' : 'none';
   settleProjEl.textContent = settleHasPartial ? '⏳ Mid-round projection — front 9 locked in, back 9 still in play. Final amounts will differ.' : '';
   // Render payments with paid checkboxes
-  window._settleKeys = [];
-  document.getElementById('settlement-list').innerHTML=payments.length
-    ?payments.map((p,pi)=>{
-      const key=p.from+'→'+p.to;
-      const keyR=p.to+'→'+p.from+'_recv';
-      const isPaid=settlePaidSet.has(key);
-      const isRecvd=settlePaidSet.has(keyR);
-      const bothDone=isPaid&&isRecvd;
-      const rowId='spr-'+(key.split('').reduce((h,c)=>Math.imul(31,h)+c.charCodeAt(0)|0,0)>>>0).toString(36);
-      window._settleKeys[pi*2] = key;
-      window._settleKeys[pi*2+1] = keyR;
-      return `<div class="settle-pay-row${bothDone?' paid':''}" id="${rowId}">
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-            <span class="settlement-from">${p.from}</span>
-            <span class="settlement-arrow">→</span>
-            <span class="settlement-to">${p.to}</span>
-            <span class="settlement-amount" style="${bothDone?'text-decoration:line-through;color:var(--mid-gray)':''}">$${p.amount}</span>
-          </div>
-          <div style="display:flex;gap:16px">
-            <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleSettlePaid(window._settleKeys[${pi*2}])"><div class="settle-pay-check${isPaid?' checked':''}" style="width:22px;height:22px;font-size:calc(12px * var(--scale))">${isPaid?'✓':''}</div><span style="font-size:calc(11px * var(--scale));color:${isPaid?'var(--green)':'var(--gray)'}">${p.from.split(',')[0].trim()} paid</span></div>
-            <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleSettlePaid(window._settleKeys[${pi*2+1}])"><div class="settle-pay-check${isRecvd?' checked':''}" style="width:22px;height:22px;font-size:calc(12px * var(--scale))">${isRecvd?'✓':''}</div><span style="font-size:calc(11px * var(--scale));color:${isRecvd?'var(--green)':'var(--gray)'}">${p.to.split(',')[0].trim()} received</span></div>
-          </div>
-        </div>
-      </div>`;
-    }).join('')
-    :'<div style="text-align:center;padding:16px;color:var(--gray);font-size:calc(14px * var(--scale))">Everyone is even! 🎉</div>';
+  window._settleKeys = payments.map(p => p.from+'→'+p.to);
+  document.getElementById('settlement-list').innerHTML = payments.length
+    ? payments.map((p, pi) => {
+        const key = window._settleKeys[pi];
+        const isPaid = settlePaidSet.has(key);
+        return '<div class="settle-pay-row' + (isPaid ? ' paid' : '') + '" style="cursor:pointer" onclick="toggleSettlePaid(' + pi + ')">'
+          + '<div class="settle-pay-check' + (isPaid ? ' checked' : '') + '">' + (isPaid ? '✓' : '') + '</div>'
+          + '<div style="flex:1;min-width:0">'
+          + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+          + '<span class="settlement-from">' + p.from + '</span>'
+          + '<span class="settlement-arrow">→</span>'
+          + '<span class="settlement-to">' + p.to + '</span>'
+          + '</div>'
+          + (isPaid ? '<div style="font-size:calc(11px * var(--scale));color:var(--green);margin-top:1px">✅ Settled</div>' : '')
+          + '</div>'
+          + '<div class="settlement-amount" style="' + (isPaid ? 'text-decoration:line-through;color:var(--mid-gray)' : '') + '">$' + p.amount + '</div>'
+          + '</div>';
+      }).join('')
+    : '<div style="text-align:center;padding:16px;color:var(--gray);font-size:calc(14px * var(--scale))">Everyone is even! 🎉</div>';
   const fmt=n=>n>0?`<span class="lb-positive">+$${n}</span>`:n<0?`<span class="lb-negative">-$${Math.abs(n)}</span>`:`<span class="lb-zero">$0</span>`;
   document.getElementById('settle-totals').innerHTML=Object.entries(totals).sort((a,b)=>b[1]-a[1]).map(([p,total])=>{
     const cls=total>0?'lb-positive':total<0?'lb-negative':'lb-zero';
