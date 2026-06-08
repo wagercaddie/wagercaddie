@@ -2786,11 +2786,11 @@ function renderMyRound(playerName) {
       }
       if (parts.length) {
         const anyUp = parts.some(p=>p.val>0), anyDn = parts.some(p=>p.val<0);
-        return {txt: parts.map(p=>p.txt).join(' · '), col: anyUp&&!anyDn?'#16a34a':anyDn&&!anyUp?'#ef4444':'var(--mid-gray)'};
+        return {txt: parts.map(p=>p.txt).join(' · '), col: anyUp&&!anyDn?'#16a34a':anyDn&&!anyUp?'#ef4444':'var(--mid-gray)', parts};
       }
     }
-    if (thru > 0) return {txt: 'Thru '+thru, col: 'var(--mid-gray)'};
-    return {txt: 'Pending', col: 'var(--light-gray)'};
+    if (thru > 0) return {txt: 'Thru '+thru, col: 'var(--mid-gray)', parts:[]};
+    return {txt: 'Pending', col: 'var(--light-gray)', parts:[]};
   };
 
   let wheelHtml = '';
@@ -2799,9 +2799,15 @@ function renderMyRound(playerName) {
     let up=0, dn=0, even=0;
     bets.forEach(b => {
       const s = getBetStatus(b);
-      if (s.txt.indexOf('up')>-1) up++;
-      else if (s.txt.indexOf('dn')>-1) dn++;
-      else even++;
+      if (s.parts && s.parts.length) {
+        s.parts.forEach(p => {
+          if (p.val > 0) up++;
+          else if (p.val < 0) dn++;
+          else even++;
+        });
+      } else {
+        even++;
+      }
     });
     const net = up - dn;
     const netCol = net>0?'#16a34a':net<0?'#ef4444':'var(--mid-gray)';
@@ -2823,7 +2829,7 @@ function renderMyRound(playerName) {
         <span style="font-size:calc(11px * var(--scale));font-weight:700;color:var(--dark)">${wLabel}</span>
         <span id="${uid}_icon" style="color:var(--mid-gray);font-size:calc(10px * var(--scale))">▶</span>
       </div>
-      <div style="font-size:calc(11px * var(--scale));color:var(--mid-gray);margin:3px 0 0">${summary}</div>
+
       <div id="${uid}_body" style="display:none;margin-top:6px">${betRows}</div>
     </div>`;
   });
