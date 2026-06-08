@@ -162,6 +162,16 @@
   .lb-header-num{width:36px;}
   .lb-num-cell{width:36px;font-size:11px;}
 }
+  /* Mobile leaderboard — name + net only, detail columns hidden */
+  @media (max-width: 600px) {
+  .lb-col-hide{display:none !important;}
+  .lb-name-cell{flex:1;}
+  .lb-score-inline{display:none !important;}
+  .lb-net-mobile{display:flex !important;}
+}
+  @media (min-width: 601px) {
+  .lb-net-mobile{display:none !important;}
+}
   .lb-num-cell .lb-positive,.lb-num-cell .lb-negative,.lb-num-cell .lb-zero{font-size:calc(14px * var(--scale));font-weight:600;}
   .lb-name{font-weight:700;font-size:calc(15px * var(--scale));display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;flex-shrink:1;min-width:0;}
   .lb-chevron{font-size:calc(10px * var(--scale));color:var(--mid-gray);margin-right:5px;transition:transform 0.2s;display:inline-block;flex-shrink:0;}
@@ -482,11 +492,12 @@
         <div class="lb-header">
           <span class="lb-chevron" style="visibility:hidden;flex-shrink:0">▶</span>
           <span class="lb-header-cell lb-header-name">Player</span>
-          <span class="lb-header-cell lb-header-num">Wheel</span>
-          <span class="lb-header-cell lb-header-num">Skins</span>
-          <span class="lb-header-cell lb-header-num">Indie</span>
-          <span class="lb-header-cell lb-header-num">2-Dwn</span>
-          <span class="lb-header-cell lb-header-num">Net</span>
+          <span class="lb-header-cell lb-header-num lb-col-hide">Wheel</span>
+          <span class="lb-header-cell lb-header-num lb-col-hide">Skins</span>
+          <span class="lb-header-cell lb-header-num lb-col-hide">Indie</span>
+          <span class="lb-header-cell lb-header-num lb-col-hide">2-Dwn</span>
+          <span class="lb-header-cell lb-header-num lb-col-hide">Net</span>
+          <span class="lb-header-cell lb-header-num lb-net-mobile" style="display:none">Net</span>
         </div>
         <div id="leaderboard-body"></div>
       </div>
@@ -3212,12 +3223,19 @@ async function renderResults() {
       </div>`;
       return`<div class="lb-row" id="row-${uid}" onclick="toggleLbRow('${uid}')">
         <span class="lb-chevron">▶</span>
-        <span class="lb-name-cell"><span class="lb-name">${r.name}</span>${fbInline}</span>
-        <span class="lb-num-cell">${fmt(r.wheel)}</span>
-        <span class="lb-num-cell"><span class="${sCls}">${sFmt}</span></span>
-        <span class="lb-num-cell"><span class="${iCls}">${iFmt}</span></span>
-        <span class="lb-num-cell"><span class="${tdCls}">${tdFmt}</span></span>
-        <span class="lb-num-cell lb-amount ${nCls}">${nFmt}</span>
+        <span class="lb-name-cell">
+          <span class="lb-name">${r.name}</span>
+          <span class="lb-score-inline">${fbInline}</span>
+          <span class="lb-net-mobile" style="display:none;flex-direction:column;align-items:flex-end;margin-left:auto;gap:1px">
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:calc(17px * var(--scale));letter-spacing:1px" class="${nCls}">${nFmt}</span>
+            <span style="font-size:calc(10px * var(--scale));color:var(--mid-gray)">W:${wFmt} S:${sFmt}${r.twodown!==0?' 2D:'+tdFmt:''}</span>
+          </span>
+        </span>
+        <span class="lb-num-cell lb-col-hide">${fmt(r.wheel)}</span>
+        <span class="lb-num-cell lb-col-hide"><span class="${sCls}">${sFmt}</span></span>
+        <span class="lb-num-cell lb-col-hide"><span class="${iCls}">${iFmt}</span></span>
+        <span class="lb-num-cell lb-col-hide"><span class="${tdCls}">${tdFmt}</span></span>
+        <span class="lb-num-cell lb-amount ${nCls} lb-col-hide">${nFmt}</span>
       </div>
       <div class="lb-expand-div" id="exp-${uid}">${expandHtml}</div>`;
     }).join('');
