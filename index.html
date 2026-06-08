@@ -1414,8 +1414,8 @@ function renderPairingBets(bets, betGroups) {
           else if (d < 0) losses++;
         });
         const netBets = wins - losses;
-        const amtA = scopeBets[0].amount;
-        const amtB = scopeBets[0].amountB || amtA;
+        const amtA = origBet.amount;
+        const amtB = origBet.amountB || amtA;
         if (netBets > 0) {
           netStr = ` <span style="color:#16a34a;font-weight:700;margin-left:4px">→ +${netBets} bet${netBets>1?'s':''} = +$${netBets*amtA}/player</span>`;
         } else if (netBets < 0) {
@@ -2686,8 +2686,9 @@ function renderMyRound(playerName) {
 
   // ── Money totals ──
   const pairingTotals = resultsData.pairingTotals || {};
+  const skinsNetMap   = resultsData.skinsNetMap   || {};
   const wheelAmt  = playerTotals[playerName] || 0;
-  const skinsAmt  = playerTotals[playerName+'_skins'] || 0;
+  const skinsAmt  = skinsNetMap[playerName] !== undefined ? skinsNetMap[playerName] : 0;
   const indieAmt  = indieTotals[playerName] || 0;
   const pairingAmt = pairingTotals[playerName] || 0;
   const netAmt    = wheelAmt + skinsAmt + indieAmt + pairingAmt;
@@ -3047,6 +3048,7 @@ async function renderResults() {
     const perSkin=totalSkins>0?pot/totalSkins:0;
     const skinsNetMap={};
     active.forEach(p=>{skinsNetMap[p.name]=(parseInt(p.total)>0?Math.round(parseInt(p.total)*perSkin):0)-buyin;});
+    resultsData.skinsNetMap = skinsNetMap;
     const skinsDetail={};
     winners.forEach(p=>{skinsDetail[p.name]={skins:p.total,details:p.details,payout:Math.round(parseInt(p.total)*perSkin)};});
     const allPlayers=new Set([...Object.keys(playerTotals),...Array.from(activeNames),...Object.keys(indieTotals)]);
