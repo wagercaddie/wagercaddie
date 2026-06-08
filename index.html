@@ -3643,19 +3643,8 @@ async function loadSettlePaid(roundDate) {
 async function toggleSettlePaid(pairKey) {
   const wasPaid = settlePaidSet.has(pairKey);
   if (wasPaid) settlePaidSet.delete(pairKey); else settlePaidSet.add(pairKey);
-  // Update UI immediately
-  const safeId = 'spr-'+(pairKey.split('').reduce((h,c)=>Math.imul(31,h)+c.charCodeAt(0)|0,0)>>>0).toString(36);
-  const row = document.getElementById(safeId);
-  if (row) {
-    row.classList.toggle('paid', !wasPaid);
-    const chk = row.querySelector('.settle-pay-check');
-    if (chk) { chk.classList.toggle('checked', !wasPaid); chk.textContent = !wasPaid ? '✓' : ''; }
-    const amtEl = row.querySelector('.settlement-amount');
-    if (amtEl) amtEl.style.textDecoration = !wasPaid ? 'line-through' : '';
-    const lbl = row.querySelector('[style*="Tap"]') || row.querySelectorAll('div[style]')[row.querySelectorAll('div[style]').length-1];
-    // re-render to get label right
-    if (settlementData) renderSettlement(settlementData);
-  }
+  // Re-render immediately from settlePaidSet state
+  if (settlementData) renderSettlement(settlementData);
   // Persist to Config sheet
   try {
     const val = [...settlePaidSet].join(',');
