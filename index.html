@@ -1501,8 +1501,6 @@ const bbInfo = (players, h) => {
           const bPopped = false;
           const aName = aInfo.player || '—';
           const bName = bInfo.player || '—';
-          const aName = (aInfo.tied ? aInfo.player : shortNameI(aInfo.player || '—')) + (aPopped ? '*' : '');
-          const bName = (bInfo.tied ? bInfo.player : shortNameI(bInfo.player || '—')) + (bPopped ? '*' : '');
           // Dot indicator: check if score differs from gross (net stroke applied)
           // Dot: show when player received a stroke (net < gross due to delta HI)
           const aGross = (!aInfo.tied && hd.players[aInfo.player]) ? hd.players[aInfo.player].gross[h] : null;
