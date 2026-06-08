@@ -3682,14 +3682,17 @@ function renderSettlement(data) {
   settleProjEl.style.display = settleHasPartial ? 'block' : 'none';
   settleProjEl.textContent = settleHasPartial ? '⏳ Mid-round projection — front 9 locked in, back 9 still in play. Final amounts will differ.' : '';
   // Render payments with paid checkboxes
+  window._settleKeys = [];
   document.getElementById('settlement-list').innerHTML=payments.length
-    ?payments.map(p=>{
+    ?payments.map((p,pi)=>{
       const key=p.from+'→'+p.to;
       const keyR=p.to+'→'+p.from+'_recv';
       const isPaid=settlePaidSet.has(key);
       const isRecvd=settlePaidSet.has(keyR);
       const bothDone=isPaid&&isRecvd;
       const rowId='spr-'+(key.split('').reduce((h,c)=>Math.imul(31,h)+c.charCodeAt(0)|0,0)>>>0).toString(36);
+      window._settleKeys[pi*2] = key;
+      window._settleKeys[pi*2+1] = keyR;
       return `<div class="settle-pay-row${bothDone?' paid':''}" id="${rowId}">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
@@ -3699,8 +3702,8 @@ function renderSettlement(data) {
             <span class="settlement-amount" style="${bothDone?'text-decoration:line-through;color:var(--mid-gray)':''}">$${p.amount}</span>
           </div>
           <div style="display:flex;gap:16px">
-            <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleSettlePaid(this.closest('[data-paid-key]').getAttribute('data-paid-key'))" data-paid-key="${key}"><div class="settle-pay-check${isPaid?' checked':''}" style="width:22px;height:22px;font-size:calc(12px * var(--scale))">${isPaid?'\u2713':''}</div><span style="font-size:calc(11px * var(--scale));color:${isPaid?'var(--green)':'var(--gray)'}">${p.from.split(',')[0].trim()} paid</span></div>
-            <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleSettlePaid(this.closest('[data-paid-key]').getAttribute('data-paid-key'))" data-paid-key="${keyR}"><div class="settle-pay-check${isRecvd?' checked':''}" style="width:22px;height:22px;font-size:calc(12px * var(--scale))">${isRecvd?'\u2713':''}</div><span style="font-size:calc(11px * var(--scale));color:${isRecvd?'var(--green)':'var(--gray)'}">${p.to.split(',')[0].trim()} received</span></div>
+            <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleSettlePaid(window._settleKeys[${pi*2}])"><div class="settle-pay-check${isPaid?' checked':''}" style="width:22px;height:22px;font-size:calc(12px * var(--scale))">${isPaid?'✓':''}</div><span style="font-size:calc(11px * var(--scale));color:${isPaid?'var(--green)':'var(--gray)'}">${p.from.split(',')[0].trim()} paid</span></div>
+            <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleSettlePaid(window._settleKeys[${pi*2+1}])"><div class="settle-pay-check${isRecvd?' checked':''}" style="width:22px;height:22px;font-size:calc(12px * var(--scale))">${isRecvd?'✓':''}</div><span style="font-size:calc(11px * var(--scale));color:${isRecvd?'var(--green)':'var(--gray)'}">${p.to.split(',')[0].trim()} received</span></div>
           </div>
         </div>
       </div>`;
