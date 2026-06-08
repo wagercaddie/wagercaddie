@@ -2806,7 +2806,8 @@ function renderMyRound(playerName) {
     const net = up - dn;
     const netCol = net>0?'#16a34a':net<0?'#ef4444':'var(--mid-gray)';
     const netFmtW = net>0?'+'+net+' bets':net<0?net+' bets':'even';
-    const summary = `${up}↑ ${dn}↓ ${even}= · <span style="color:${netCol};font-weight:700">${netFmtW} = ${net>0?'+':''}$${net*5}/player</span>`;
+    const betAmt = bets[0] ? (bets[0].amount || 5) : 5;
+    const summary = `${up}↑ ${dn}↓ ${even}= · <span style="color:${netCol};font-weight:700">${netFmtW} = ${net>0?'+':''}$${Math.abs(net)*betAmt}/player</span>`;
     const wLabel = grp.isMyWheel ? '🎡 ON WHEEL w/ '+(grp.wP1===playerName?shortN(grp.wP2):shortN(grp.wP1)) : '⚔️ vs '+shortN(grp.wP1)+'&'+shortN(grp.wP2);
     const uid = 'wg_'+gi;
     const betRows = bets.map(b => {
@@ -2842,15 +2843,24 @@ function renderMyRound(playerName) {
   const twoDownBody = uniquePairing.length > 0 ? uniquePairing.map(b => {
     const isA = b.teamsA.split('|').map(p=>p.trim()).includes(playerName);
     const opp = (isA?b.teamsB:b.teamsA).split('|').map(shortN).join('/');
-    const fin = isA ? b.finalDiff : (b.finalDiff!==null?-b.finalDiff:null);
-    const cur = isA ? b.currentDiff : (b.currentDiff!==null?-b.currentDiff:null);
-    const d = fin!==null&&fin!==undefined ? fin : cur;
-    const dFmt = d===null||d===undefined?'—':d>0?'+'+d:d===0?'E':''+d;
-    const dCol = d>0?'#16a34a':d<0?'#ef4444':'var(--mid-gray)';
-    const settled = b.status==='FINAL'||b.finalDiff!==null;
-    const statusSuffix = settled
+    // Sum net diff across all scopes in this group (front + back + long)
+    const groupBets = pairingBets.filter(pb => pb.groupId === b.groupId && !pb.parentId);
+    let netD = null;
+    let allSettled = true;
+    let maxHole = 0;
+    groupBets.forEach(pb => {
+      const fd = pb.finalDiff !== null && pb.finalDiff !== undefined ? pb.finalDiff : null;
+      const cd = pb.currentDiff !== null && pb.currentDiff !== undefined ? pb.currentDiff : null;
+      const val = fd !== null ? fd : cd;
+      if (val !== null) { netD = (netD || 0) + (isA ? val : -val); }
+      if (fd === null) allSettled = false;
+      if (pb.lastHole > maxHole) maxHole = pb.lastHole;
+    });
+    const dFmt = netD===null?'—':netD>0?'+'+netD:netD===0?'E':''+netD;
+    const dCol = netD>0?'#16a34a':netD<0?'#ef4444':'var(--mid-gray)';
+    const statusSuffix = allSettled
       ? '<span style="font-size:calc(10px * var(--scale));color:var(--mid-gray);margin-left:4px">FINAL</span>'
-      : (b.lastHole>0 ? '<span style="font-size:calc(10px * var(--scale));color:var(--mid-gray);margin-left:4px">thru '+b.lastHole+'</span>' : '');
+      : (maxHole>0 ? '<span style="font-size:calc(10px * var(--scale));color:var(--mid-gray);margin-left:4px">thru '+maxHole+'</span>' : '');
     return row('vs '+opp, dFmt+statusSuffix, dCol);
   }).join('') : '<div style="font-size:calc(12px * var(--scale));color:var(--mid-gray)">No 2-Down bets</div>';
 
