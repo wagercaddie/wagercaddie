@@ -365,6 +365,10 @@
   </div>
   <div id="round-format-display" style="font-size:calc(11px * var(--scale));color:rgba(255,255,255,0.6)"></div>
 </div>
+    <div id="update-check-bar" style="display:none;background:#fef9c3;border:1px solid #d4a017;border-radius:10px;padding:8px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;font-size:calc(12px * var(--scale));color:#92400e">
+      <span>🔄 New version available</span>
+      <button onclick="applyUpdate()" style="background:#d4a017;color:#1a1a1a;border:none;padding:5px 14px;border-radius:8px;font-weight:700;cursor:pointer;font-size:calc(12px * var(--scale))">Update Now</button>
+    </div>
     <div id="bet-loading" class="loading"><div class="spinner"></div><div>Loading...</div></div>
     <!-- BETS FINALIZED BANNER -->
     <div id="bet-finalized" style="display:none;padding:12px">
@@ -886,6 +890,9 @@
   <div id="twodown-loading" class="loading"><div class="spinner"></div><div>Loading...</div></div>
   <div id="twodown-content" style="display:none">
     <div id="twodown-bets-list"></div>
+    <div style="padding:0 0 8px">
+      <button class="btn btn-dark btn-sm" onclick="refreshScores()" style="margin-top:0">⟳ Refresh Scores</button>
+    </div>
     <div style="height:80px"></div>
   </div>
   <div id="twodown-empty" style="display:none;text-align:center;padding:60px 20px">
@@ -978,19 +985,15 @@ if ('serviceWorker' in navigator) {
 }
 
 function showUpdateToast(sw) {
-  // Don't show if already visible
-  if (document.getElementById('update-toast')) return;
-  const toast = document.createElement('div');
-  toast.id = 'update-toast';
-  toast.style.cssText = 'position:fixed;bottom:75px;left:10px;right:10px;background:#1b4332;color:white;padding:12px 16px;border-radius:12px;border:2px solid #d4a017;z-index:999;font-size:calc(13px * var(--scale));font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:space-between;gap:10px';
-  toast.innerHTML = '<span>🔄 New version available</span><button onclick="applyUpdate()" style="background:#d4a017;color:#1a1a1a;border:none;padding:6px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-size:calc(13px * var(--scale));white-space:nowrap">Update</button>';
-  document.body.appendChild(toast);
   window._pendingSW = sw;
+  // Show the inline bar on the bet screen instead of a floating toast
+  const bar = document.getElementById('update-check-bar');
+  if (bar) bar.style.display = 'flex';
 }
 
 function applyUpdate() {
-  const toast = document.getElementById('update-toast');
-  if (toast) toast.remove();
+  const bar = document.getElementById('update-check-bar');
+  if (bar) bar.style.display = 'none';
   if (window._pendingSW) {
     window._pendingSW.postMessage({ type: 'SKIP_WAITING' });
   }
@@ -3682,22 +3685,24 @@ function renderSettlement(data) {
   document.getElementById('settlement-list').innerHTML=payments.length
     ?payments.map(p=>{
       const key=p.from+'→'+p.to;
+      const keyR=p.to+'→'+p.from+'_recv';
       const isPaid=settlePaidSet.has(key);
-      return `<div class="settle-pay-row${isPaid?' paid':''}" id="${'spr-'+(key.split('').reduce((h,c)=>Math.imul(31,h)+c.charCodeAt(0)|0,0)>>>0).toString(36)}">
-        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
-          <div class="settle-pay-check${isPaid?' checked':''}" onclick="toggleSettlePaid('${key.replace(/'/g,"\'")}')">
-            ${isPaid?'✓':''}
+      const isRecvd=settlePaidSet.has(keyR);
+      const bothDone=isPaid&&isRecvd;
+      const rowId='spr-'+(key.split('').reduce((h,c)=>Math.imul(31,h)+c.charCodeAt(0)|0,0)>>>0).toString(36);
+      return `<div class="settle-pay-row${bothDone?' paid':''}" id="${rowId}">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <span class="settlement-from">${p.from}</span>
+            <span class="settlement-arrow">→</span>
+            <span class="settlement-to">${p.to}</span>
+            <span class="settlement-amount" style="${bothDone?'text-decoration:line-through;color:var(--mid-gray)':''}">$${p.amount}</span>
           </div>
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <span class="settlement-from">${p.from}</span>
-              <span class="settlement-arrow">→</span>
-              <span class="settlement-to">${p.to}</span>
-            </div>
-            ${isPaid ? '<div style="font-size:calc(11px * var(--scale));color:var(--green);margin-top:1px">✅ Paid</div>' : ''}
+          <div style="display:flex;gap:16px">
+            <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleSettlePaid('${key.replace(/'/g,\"\\'\")}')"><div class="settle-pay-check${isPaid?' checked':''}" style="width:22px;height:22px;font-size:calc(12px * var(--scale))">${isPaid?'✓':''}</div><span style="font-size:calc(11px * var(--scale));color:${isPaid?'var(--green)':'var(--gray)'}">${p.from.split(',')[0]} paid</span></div>
+            <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleSettlePaid('${keyR.replace(/'/g,\"\\'\")}')"><div class="settle-pay-check${isRecvd?' checked':''}" style="width:22px;height:22px;font-size:calc(12px * var(--scale))">${isRecvd?'✓':''}</div><span style="font-size:calc(11px * var(--scale));color:${isRecvd?'var(--green)':'var(--gray)'}">${p.to.split(',')[0]} received</span></div>
           </div>
         </div>
-        <div class="settlement-amount" style="${isPaid?'text-decoration:line-through;color:var(--mid-gray)':''}">$${p.amount}</div>
       </div>`;
     }).join('')
     :'<div style="text-align:center;padding:16px;color:var(--gray);font-size:calc(14px * var(--scale))">Everyone is even! 🎉</div>';
