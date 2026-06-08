@@ -1465,20 +1465,25 @@ function renderPairingBets(bets, betGroups) {
         };
 
 const bbInfo = (players, h) => {
-let best = null, bestPlayers = [];
-players.forEach(p => {
-  const s = netScore(p, h);
-  if (s !== null) {
-    if (best === null || s < best) { best = s; bestPlayers = [p]; }
-    else if (s === best) { bestPlayers.push(p); }
-  }
-});
-const shortN = n => n.split(',')[0].trim();
-return {
-  score: best,
-  player: bestPlayers.length > 1 ? bestPlayers.map(shortN).join('/') : bestPlayers[0] || null,
-  tied: bestPlayers.length > 1
-};
+  let best = null, bestPlayers = [];
+  players.forEach(p => {
+    const s = netScore(p, h);
+    if (s !== null) {
+      if (best === null || s < best) { best = s; bestPlayers = [p]; }
+      else if (s === best) { bestPlayers.push(p); }
+    }
+  });
+  const shortN = n => n.split(',')[0].trim();
+  const firstI = n => { const p = n.split(','); return p[0].trim() + (p[1] ? ', ' + p[1].trim()[0] : ''); };
+  const pops = origBet.pops || {};
+  const wasPopped = p => Array.isArray(pops[p]) && pops[p].indexOf(h) > -1;
+  const playerLabel = p => firstI(p) + (wasPopped(p) ? '*' : '');
+  return {
+    score: best,
+    player: bestPlayers.length > 1 ? bestPlayers.map(playerLabel).join('/') : (bestPlayers[0] ? playerLabel(bestPlayers[0]) : null),
+    tied: bestPlayers.length > 1,
+    anyPopped: bestPlayers.some(wasPopped)
+  };
 };
 
         let rows = '';
@@ -1492,20 +1497,10 @@ return {
           runDiff += hd_val;
           const hCol = hd_val > 0 ? '#16a34a' : hd_val < 0 ? '#ef4444' : 'var(--mid-gray)';
           const diffStr = hd_val > 0 ? '+'+hd_val : hd_val === 0 ? 'E' : ''+hd_val;
-          const aPopped = origBet.pops && (
-            (!aInfo.tied && Array.isArray(origBet.pops[aInfo.player]) && origBet.pops[aInfo.player].indexOf(h) > -1) ||
-            (aInfo.tied && aInfo.player.split('/').some(n => {
-              const full = Object.keys(origBet.pops).find(k => k.split(',')[0].trim() === n.trim());
-              return full && origBet.pops[full].indexOf(h) > -1;
-            }))
-          );
-          const bPopped = origBet.pops && (
-            (!bInfo.tied && Array.isArray(origBet.pops[bInfo.player]) && origBet.pops[bInfo.player].indexOf(h) > -1) ||
-            (bInfo.tied && bInfo.player.split('/').some(n => {
-              const full = Object.keys(origBet.pops).find(k => k.split(',')[0].trim() === n.trim());
-              return full && origBet.pops[full].indexOf(h) > -1;
-            }))
-          );
+          const aPopped = false;
+          const bPopped = false;
+          const aName = aInfo.player || '—';
+          const bName = bInfo.player || '—';
           const aName = (aInfo.tied ? aInfo.player : shortNameI(aInfo.player || '—')) + (aPopped ? '*' : '');
           const bName = (bInfo.tied ? bInfo.player : shortNameI(bInfo.player || '—')) + (bPopped ? '*' : '');
           // Dot indicator: check if score differs from gross (net stroke applied)
