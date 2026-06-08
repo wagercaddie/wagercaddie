@@ -1419,7 +1419,7 @@ function renderPairingBets(bets, betGroups) {
         if (netBets > 0) {
           netStr = ` <span style="color:#16a34a;font-weight:700;margin-left:4px">→ +${netBets} bet${netBets>1?'s':''} = +$${netBets*amtA}/player</span>`;
         } else if (netBets < 0) {
-          netStr = ` <span style="color:#ef4444;font-weight:700;margin-left:4px">→ ${netBets} bet${Math.abs(netBets)>1?'s':''} = -$${Math.abs(netBets)*amtB}/player</span>`;
+          netStr = ` <span style="color:#ef4444;font-weight:700;margin-left:4px">→ ${netBets} bet${Math.abs(netBets)>1?'s':''} = -$${Math.abs(netBets)*amtA}/player</span>`;
         } else {
           netStr = ` <span style="color:var(--mid-gray);font-weight:600;margin-left:4px">→ even = $0</span>`;
         }
@@ -3049,6 +3049,7 @@ async function renderResults() {
     const skinsNetMap={};
     active.forEach(p=>{skinsNetMap[p.name]=(parseInt(p.total)>0?Math.round(parseInt(p.total)*perSkin):0)-buyin;});
     resultsData.skinsNetMap = skinsNetMap;
+    if (window._resultsData) window._resultsData.skinsNetMap = skinsNetMap;
     const skinsDetail={};
     winners.forEach(p=>{skinsDetail[p.name]={skins:p.total,details:p.details,payout:Math.round(parseInt(p.total)*perSkin)};});
     const allPlayers=new Set([...Object.keys(playerTotals),...Array.from(activeNames),...Object.keys(indieTotals)]);
