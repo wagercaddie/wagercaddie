@@ -778,20 +778,12 @@
     <!-- Team A -->
     <span class="field-label">Team A</span>
     <div id="team-a-players" style="margin-bottom:6px"></div>
-    <div class="select-wrap" style="margin-bottom:12px">
-      <select id="add-player-a" onchange="addPlayerToTeam('a')">
-        <option value="">+ Add player to Team A...</option>
-      </select>
-    </div>
+    <div id="team-a-checklist" style="margin-bottom:12px"></div>
 
     <!-- Team B -->
     <span class="field-label">Team B</span>
     <div id="team-b-players" style="margin-bottom:6px"></div>
-    <div class="select-wrap" style="margin-bottom:12px">
-      <select id="add-player-b" onchange="addPlayerToTeam('b')">
-        <option value="">+ Add player to Team B...</option>
-      </select>
-    </div>
+    <div id="team-b-checklist" style="margin-bottom:12px"></div>
 
     <!-- Amount -->
     <span class="field-label">$ Per Player Per Nine</span>
@@ -1616,15 +1608,8 @@ async function openCreatePairingBet() {
   document.getElementById('pairing-amount').value = '';
   document.getElementById('pairing-error').style.display = 'none';
 
-  // Populate player dropdowns
-  const allPlayers = sortByLastName(players);
-  ['add-player-a','add-player-b'].forEach(id => {
-    const sel = document.getElementById(id);
-    sel.innerHTML = '<option value="">+ Add player...</option>';
-    allPlayers.forEach(p => {
-      sel.innerHTML += `<option value="${p.name}">${p.name}</option>`;
-    });
-  });
+  // Build team checklists
+  renderTeamChecklists();
   renderTeamPills();
   updateNetZero();
   // Reset pops section
@@ -1671,20 +1656,53 @@ function setPairingAutoPress(on) {
   document.getElementById('press-threshold').style.opacity = on ? '1' : '0.4';
 }
 
-function addPlayerToTeam(team) {
-  const selId = team === 'a' ? 'add-player-a' : 'add-player-b';
-  const sel = document.getElementById(selId);
-  const name = sel.value;
-  if (!name) return;
-  sel.value = '';
+function renderTeamChecklists() {
+  ['a','b'].forEach(function(team) {
+    const container = document.getElementById('team-'+team+'-checklist');
+    if (!container) return;
+    const other = team === 'a' ? pairingTeamB : pairingTeamA;
+    const mine = team === 'a' ? pairingTeamA : pairingTeamB;
+    container.innerHTML = sortByLastName(players).map(function(p) {
+      const inOther = other.indexOf(p.name) > -1;
+      const inMine = mine.indexOf(p.name) > -1;
+      const disabledStyle = inOther ? 'opacity:0.35;pointer-events:none;' : '';
+      const checkedClass = inMine ? ' checked' : '';
+      const checkMark = inMine ? '✓' : '';
+      const hdcpHtml = p.handicap != null ? '<span class="player-check-hdcp">' + (p.handicap > 0 ? '+' : '') + p.handicap + '</span>' : '';
+      const safeName = p.name.replace(/'/g, "\\'");
+      return '<div class="player-check-item' + checkedClass + '" ' +
+        'style="' + disabledStyle + 'min-height:calc(40px * var(--scale));padding:6px 12px;" ' +
+        'onclick="togglePairingPlayer(\'' + team + '\',\'' + safeName + '\',this)">' +
+        '<div class="check-box" style="width:24px;height:24px">' + checkMark + '</div>' +
+        '<div class="player-check-name" style="font-size:calc(15px * var(--scale))">' + p.name + '</div>' +
+        hdcpHtml +
+        '</div>';
+    }).join('');
+  });
+}
+
+function togglePairingPlayer(team, name, el) {
   const arr = team === 'a' ? pairingTeamA : pairingTeamB;
   const other = team === 'a' ? pairingTeamB : pairingTeamA;
-  if (arr.indexOf(name) > -1) { showToast('Already on this team', 'error'); return; }
-  if (other.indexOf(name) > -1) { showToast('Already on the other team', 'error'); return; }
-  arr.push(name);
+  if (other.indexOf(name) > -1) return;
+  const idx = arr.indexOf(name);
+  if (idx > -1) {
+    arr.splice(idx, 1);
+    el.classList.remove('checked');
+    el.querySelector('.check-box').textContent = '';
+  } else {
+    arr.push(name);
+    el.classList.add('checked');
+    el.querySelector('.check-box').textContent = '✓';
+  }
+  renderTeamChecklists();
   renderTeamPills();
   updateNetZero();
   renderPopsSection();
+}
+
+function addPlayerToTeam(team) {
+  // Legacy stub — no longer used but kept to avoid errors
 }
 
 function removeFromTeam(team, name) {
