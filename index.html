@@ -1353,6 +1353,7 @@ function renderPairingBets(bets, betGroups) {
 
   const shortName = n => n.split(',')[0].trim();
   const teamLabel = t => t.split('|').map(shortName).join('/');
+  const shortNameI = n => { const p = n.split(','); return p[0].trim() + (p[1] ? ', ' + p[1].trim()[0] : ''); };
 
   list.innerHTML = Object.values(groups).map(g => {
     const sortedBets = [...g.bets].sort((a,b) => a.startHole - b.startHole);
@@ -1491,8 +1492,10 @@ return {
           runDiff += hd_val;
           const hCol = hd_val > 0 ? '#16a34a' : hd_val < 0 ? '#ef4444' : 'var(--mid-gray)';
           const diffStr = hd_val > 0 ? '+'+hd_val : hd_val === 0 ? 'E' : ''+hd_val;
-          const aName = aInfo.player || '—';
-          const bName = bInfo.player || '—';
+          const aPopped = !aInfo.tied && origBet.pops && Array.isArray(origBet.pops[aInfo.player]) && origBet.pops[aInfo.player].indexOf(h) > -1;
+          const bPopped = !bInfo.tied && origBet.pops && Array.isArray(origBet.pops[bInfo.player]) && origBet.pops[bInfo.player].indexOf(h) > -1;
+          const aName = (aInfo.tied ? aInfo.player : shortNameI(aInfo.player || '—')) + (aPopped ? '*' : '');
+          const bName = (bInfo.tied ? bInfo.player : shortNameI(bInfo.player || '—')) + (bPopped ? '*' : '');
           // Dot indicator: check if score differs from gross (net stroke applied)
           // Dot: show when player received a stroke (net < gross due to delta HI)
           const aGross = (!aInfo.tied && hd.players[aInfo.player]) ? hd.players[aInfo.player].gross[h] : null;
