@@ -3861,13 +3861,25 @@ async function loadIndieHistory() {
     });
     el.innerHTML = Object.values(grouped).reverse().map(g => `
       <div style="margin-bottom:12px">
-        <div style="font-weight:600;font-size:calc(13px * var(--scale));margin-bottom:4px">${g.date}${g.note?' · '+g.note:''}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div style="font-weight:600;font-size:calc(13px * var(--scale))">${g.date}${g.note?' · '+g.note:''}</div>
+          <button onclick="deleteIndieGroup('${g.date}','${(g.note||'').replace(/'/g,"\'")}')" style="background:none;border:1px solid var(--light-gray);border-radius:6px;padding:2px 8px;font-size:calc(11px * var(--scale));color:var(--red);cursor:pointer">Delete</button>
+        </div>
         ${g.entries.map(e=>`<div class="indie-history-row">
           <span>${e.player}</span>
           <span class="${e.amount>0?'lb-positive':'lb-negative'}">${e.amount>0?'+$'+e.amount:'-$'+Math.abs(e.amount)}</span>
         </div>`).join('')}
       </div>`).join('');
   }catch(e){el.innerHTML='<div style="font-size:calc(13px * var(--scale));color:var(--gray)">Could not load history</div>';}
+}
+
+async function deleteIndieGroup(date, note) {
+  if (!confirm('Delete indie entry for ' + date + (note ? ' · ' + note : '') + '?')) return;
+  try {
+    const r = await callScript('deleteIndie', {date, note});
+    if (r.success) { showToast('Indie entry deleted', 'success'); loadIndieHistory(); }
+    else showToast(r.error || 'Delete failed', 'error');
+  } catch(e) { showToast('Delete failed', 'error'); }
 }
 
 // ── SEASON ──
