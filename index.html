@@ -3699,8 +3699,8 @@ function renderSettlement(data) {
             <span class="settlement-amount" style="${bothDone?'text-decoration:line-through;color:var(--mid-gray)':''}">$${p.amount}</span>
           </div>
           <div style="display:flex;gap:16px">
-            <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleSettlePaid(this.getAttribute('data-k'))" data-k="${key}"><div class="settle-pay-check${isPaid?' checked':''}" style="width:22px;height:22px;font-size:calc(12px * var(--scale))">${isPaid?'\u2713':''}</div><span style="font-size:calc(11px * var(--scale));color:${isPaid?'var(--green)':'var(--gray)'}">${p.from.split(',')[0].trim()} paid</span></div>
-            <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleSettlePaid(this.getAttribute('data-k'))" data-k="${keyR}"><div class="settle-pay-check${isRecvd?' checked':''}" style="width:22px;height:22px;font-size:calc(12px * var(--scale))">${isRecvd?'\u2713':''}</div><span style="font-size:calc(11px * var(--scale));color:${isRecvd?'var(--green)':'var(--gray)'}">${p.to.split(',')[0].trim()} received</span></div>
+            <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleSettlePaid('${key}')"><div class="settle-pay-check${isPaid?' checked':''}" style="width:22px;height:22px;font-size:calc(12px * var(--scale))">${isPaid?'\u2713':''}</div><span style="font-size:calc(11px * var(--scale));color:${isPaid?'var(--green)':'var(--gray)'}">${p.from.split(',')[0].trim()} paid</span></div>
+            <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="toggleSettlePaid('${keyR}')"><div class="settle-pay-check${isRecvd?' checked':''}" style="width:22px;height:22px;font-size:calc(12px * var(--scale))">${isRecvd?'\u2713':''}</div><span style="font-size:calc(11px * var(--scale));color:${isRecvd?'var(--green)':'var(--gray)'}">${p.to.split(',')[0].trim()} received</span></div>
           </div>
         </div>
       </div>`;
