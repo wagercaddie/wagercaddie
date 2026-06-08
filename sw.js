@@ -1,5 +1,5 @@
 // WagerCaddie Service Worker
-const CACHE_NAME = 'wagercaddie-v11';
+const CACHE_NAME = 'wagercaddie-v13';
 const APP_SHELL = [
   '/',
   '/index.html',
