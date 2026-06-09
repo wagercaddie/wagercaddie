@@ -846,14 +846,13 @@
 
     <!-- POPS / STROKES SECTION -->
     <div id="pops-section" style="margin-bottom:12px">
-      <span class="field-label">POPS / STROKES</span>
+      <span class="field-label" id="pops-section-label">POPS / STROKES</span>
       <div id="pops-su" style="display:none;margin-top:6px">
         <div style="font-size:calc(11px * var(--scale));color:var(--mid-gray);margin-bottom:8px">Select holes where each player gets a pop stroke. Hardest holes listed first by stroke index.</div>
         <div id="pops-player-grids"></div>
       </div>
       <div id="pops-hi" style="display:none;margin-top:6px">
-        <div style="font-size:calc(11px * var(--scale));color:var(--mid-gray);margin-bottom:4px">Strokes apply on hardest holes based on handicap delta. Optionally exclude finishing holes.</div>
-        <div style="font-size:calc(11px * var(--scale));font-weight:600;color:var(--gray);margin-bottom:6px">Common: exclude h9 and/or h18</div>
+        <div style="font-size:calc(11px * var(--scale));color:var(--mid-gray);margin-bottom:4px">Check holes to <strong>exclude</strong> from stroke allocation. Strokes shift to the next hardest eligible hole. Common: exclude h9 and/or h18 (finishing holes).</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px" id="pops-exclude-grid"></div>
       </div>
     </div>
@@ -1491,6 +1490,7 @@ function renderPairingBets(bets, betGroups) {
           ? Math.min(...allBetPlayers.map(p => Math.abs((hd.players[p]||{}).handicap||0)))
           : 0;
 
+        const hiExclude = (origBet.pops && Array.isArray(origBet.pops.exclude)) ? origBet.pops.exclude : [];
         const gotStroke = (p, h) => {
           const pd = hd.players[p];
           if (!pd) return false;
@@ -1498,10 +1498,15 @@ function renderPairingBets(bets, betGroups) {
             const pops = origBet.pops;
             return pops && typeof pops === 'object' && Array.isArray(pops[p]) && pops[p].indexOf(h) > -1;
           }
+          // Excluded holes give no stroke
+          if (hiExclude.indexOf(h) > -1) return false;
           const hcp = Math.abs(pd.handicap || 0);
           const deltaHcp = Math.round((hcp - baseHcp) * hiPct / 100);
           const si = SI[h];
-          return si <= deltaHcp;
+          // Adjust SI rank by counting excluded holes with lower SI
+          const excludedBelow = hiExclude.filter(exH => SI[exH] < si).length;
+          const adjustedSi = si - excludedBelow;
+          return adjustedSi <= deltaHcp;
         };
 
         const netScore = (p, h) => {
@@ -1596,7 +1601,9 @@ const bbInfo = (players, h) => {
     const totalFmt = totalNet > 0 ? '+$'+totalNet : totalNet < 0 ? '-$'+Math.abs(totalNet) : '$0';
     const fmtLabel = origBet.format === 'fbl' ? 'F/B/L' : 'F/B';
     const hiPctVal = parseInt(origBet.hiPct)||0;
-    const hiLabel = hiPctVal === 100 ? '100% HI' : hiPctVal === 80 ? '80% HI' : 'Straight Up (0%)';
+    const hiExcludeArr = (origBet.pops && Array.isArray(origBet.pops.exclude)) ? origBet.pops.exclude : [];
+    const hiExcludeLabel = hiExcludeArr.length ? ' · excl ' + hiExcludeArr.map(i => 'h'+(i+1)).join(',') : '';
+    const hiLabel = (hiPctVal === 100 ? '100% HI' : hiPctVal === 80 ? '80% HI' : 'Straight Up (0%)') + hiExcludeLabel;
 
     return `<div class="card" style="margin-bottom:10px;padding:0;overflow:hidden">
       <!-- Header -->
@@ -1691,6 +1698,9 @@ function setPairingHI(pct) {
     el.style.background = match ? 'var(--green)' : '';
     el.style.color = match ? 'white' : '';
   });
+  // Update section label based on mode
+  const lbl = document.getElementById('pops-section-label');
+  if (lbl) lbl.textContent = pct === 0 ? 'POPS / STROKES' : 'EXCLUDE HOLES';
   // Show/hide pops section
   renderPopsSection();
 }
