@@ -1491,24 +1491,25 @@ function renderPairingBets(bets, betGroups) {
           ? Math.min(...allBetPlayers.map(p => Math.abs((hd.players[p]||{}).handicap||0)))
           : 0;
 
+        const gotStroke = (p, h) => {
+          const pd = hd.players[p];
+          if (!pd) return false;
+          if (hiPct === 0) {
+            const pops = origBet.pops;
+            return pops && typeof pops === 'object' && Array.isArray(pops[p]) && pops[p].indexOf(h) > -1;
+          }
+          const hcp = Math.abs(pd.handicap || 0);
+          const deltaHcp = Math.round((hcp - baseHcp) * hiPct / 100);
+          const si = SI[h];
+          return si <= deltaHcp;
+        };
+
         const netScore = (p, h) => {
           const pd = hd.players[p];
           if (!pd || !pd.gross) return null;
           const g = pd.gross[h];
           if (g === null || g === undefined) return null;
-          if (hiPct === 0) {
-          const pops = origBet.pops;
-          if (pops && typeof pops === 'object' && Array.isArray(pops[p])) {
-            return pops[p].indexOf(h) > -1 ? g - 1 : g;
-          }
-          return g;
-        }
-          // Delta HI: player gets strokes based on (their HCP - lowest HCP) * hiPct/100
-          const hcp = Math.abs(pd.handicap || 0);
-          const deltaHcp = Math.round((hcp - baseHcp) * hiPct / 100);
-          const si = SI[h];
-          const stroke = si <= deltaHcp ? 1 : 0;
-          return g - stroke;
+          return gotStroke(p, h) ? g - 1 : g;
         };
 
 const bbInfo = (players, h) => {
@@ -1520,16 +1521,13 @@ const bbInfo = (players, h) => {
       else if (s === best) { bestPlayers.push(p); }
     }
   });
-  const shortN = n => n.split(',')[0].trim();
   const firstI = n => { const p = n.split(','); return p[0].trim() + (p[1] ? ', ' + p[1].trim()[0] : ''); };
-  const pops = origBet.pops || {};
-  const wasPopped = p => Array.isArray(pops[p]) && pops[p].indexOf(h) > -1;
-  const playerLabel = p => firstI(p) + (wasPopped(p) ? '*' : '');
+  const playerLabel = p => firstI(p) + (gotStroke(p, h) ? '*' : '');
   return {
     score: best,
     player: bestPlayers.length > 1 ? bestPlayers.map(playerLabel).join('/') : (bestPlayers[0] ? playerLabel(bestPlayers[0]) : null),
     tied: bestPlayers.length > 1,
-    anyPopped: bestPlayers.some(wasPopped)
+    anyPopped: bestPlayers.some(p => gotStroke(p, h))
   };
 };
 
@@ -1544,16 +1542,11 @@ const bbInfo = (players, h) => {
           runDiff += hd_val;
           const hCol = hd_val > 0 ? '#16a34a' : hd_val < 0 ? '#ef4444' : 'var(--mid-gray)';
           const diffStr = hd_val > 0 ? '+'+hd_val : hd_val === 0 ? 'E' : ''+hd_val;
-          const aPopped = false;
-          const bPopped = false;
           const aName = aInfo.player || '—';
           const bName = bInfo.player || '—';
-          // Dot indicator: check if score differs from gross (net stroke applied)
-          // Dot: show when player received a stroke (net < gross due to delta HI)
-          const aGross = (!aInfo.tied && hd.players[aInfo.player]) ? hd.players[aInfo.player].gross[h] : null;
-          const bGross = (!bInfo.tied && hd.players[bInfo.player]) ? hd.players[bInfo.player].gross[h] : null;
-          const aDot = (aGross !== null && aInfo.score !== null && aInfo.score < aGross);
-          const bDot = (bGross !== null && bInfo.score !== null && bInfo.score < bGross);
+          // Dot: show when best ball player received a stroke
+          const aDot = aInfo.anyPopped;
+          const bDot = bInfo.anyPopped;
           const runCol = runDiff > 0 ? '#16a34a' : runDiff < 0 ? '#ef4444' : 'var(--mid-gray)';
           const runStr = runDiff > 0 ? '+'+runDiff : runDiff === 0 ? 'E' : ''+runDiff;
           rows += `<div style="display:grid;grid-template-columns:28px 1fr 1fr 28px 28px;gap:4px;align-items:center;padding:3px 0;border-bottom:1px solid var(--light-gray);font-size:calc(11px * var(--scale))">
