@@ -1536,8 +1536,24 @@ const bbInfo = (players, h) => {
   };
 };
 
-        let rows = '';
+        // Collect presses for this scope — sorted by startHole
+        const scopePresses = scopeBets
+          .filter(b => b.parentId && b.scope === scope)
+          .sort((a, b) => a.startHole - b.startHole);
+        const numPresses = scopePresses.length;
+
+        // Initialize running totals: one for base + one per press
         let runDiff = 0;
+        const pressRun = scopePresses.map(() => null); // null = not started yet
+
+        // Grid columns: HOLE | TEAM A | TEAM B | H | BASE | P1 | P2 | ...
+        const pressCols = numPresses > 0 ? (' 28px'.repeat(numPresses)) : '';
+        const gridCols = `28px 1fr 1fr 28px 28px${pressCols}`;
+
+        const fmtRun = v => v === null ? '' : v > 0 ? '+'+v : v === 0 ? 'E' : ''+v;
+        const runColFn = v => v === null ? 'transparent' : v > 0 ? '#16a34a' : v < 0 ? '#ef4444' : 'var(--mid-gray)';
+
+        let rows = '';
         for (let h = startH; h < Math.min(endH, maxThru); h++) {
           const hole = h + 1;
           const aInfo = bbInfo(teamsAArr, h);
@@ -1545,28 +1561,50 @@ const bbInfo = (players, h) => {
           if (aInfo.score === null || bInfo.score === null) break;
           const hd_val = bInfo.score - aInfo.score;
           runDiff += hd_val;
+
+          // Update each press running total if this hole is in its range
+          scopePresses.forEach((p, i) => {
+            if (hole >= p.startHole) {
+              if (pressRun[i] === null) pressRun[i] = 0;
+              pressRun[i] += hd_val;
+            }
+          });
+
           const hCol = hd_val > 0 ? '#16a34a' : hd_val < 0 ? '#ef4444' : 'var(--mid-gray)';
           const diffStr = hd_val > 0 ? '+'+hd_val : hd_val === 0 ? 'E' : ''+hd_val;
           const aName = aInfo.player || '—';
           const bName = bInfo.player || '—';
-          // Dot: show when best ball player received a stroke
           const aDot = aInfo.anyPopped;
           const bDot = bInfo.anyPopped;
           const runCol = runDiff > 0 ? '#16a34a' : runDiff < 0 ? '#ef4444' : 'var(--mid-gray)';
-          const runStr = runDiff > 0 ? '+'+runDiff : runDiff === 0 ? 'E' : ''+runDiff;
-          rows += `<div style="display:grid;grid-template-columns:28px 1fr 1fr 28px 28px;gap:4px;align-items:center;padding:3px 0;border-bottom:1px solid var(--light-gray);font-size:calc(11px * var(--scale))">
+          const runStr = fmtRun(runDiff);
+
+          // Press columns for this row
+          const pressCells = scopePresses.map((p, i) => {
+            const v = pressRun[i];
+            const col = runColFn(v);
+            const str = fmtRun(v);
+            return `<span style="color:${col};font-weight:700;text-align:center;font-size:calc(11px * var(--scale))">${str}</span>`;
+          }).join('');
+
+          rows += `<div style="display:grid;grid-template-columns:${gridCols};gap:4px;align-items:center;padding:3px 0;border-bottom:1px solid var(--light-gray);font-size:calc(11px * var(--scale))">
             <span style="color:var(--mid-gray);font-weight:600">h${hole}</span>
             <span style="color:var(--dark);font-weight:600">${aName} <span style="color:var(--gray);font-weight:600;font-size:calc(13px * var(--scale))">${aInfo.score}</span>${aDot ? '<span style="color:#2d6a4f;font-size:calc(13px * var(--scale));font-weight:900;vertical-align:middle;margin-left:1px">●</span>' : ''}</span>
             <span style="color:var(--dark);font-weight:600">${bName} <span style="color:var(--gray);font-weight:600;font-size:calc(13px * var(--scale))">${bInfo.score}</span>${bDot ? '<span style="color:#2d6a4f;font-size:calc(13px * var(--scale));font-weight:900;vertical-align:middle;margin-left:1px">●</span>' : ''}</span>
             <span style="color:${hCol};font-weight:700;text-align:center">${diffStr}</span>
             <span style="color:${runCol};font-weight:700;text-align:center">${runStr}</span>
+            ${pressCells}
           </div>`;
         }
         if (rows) {
           const scopeUid = uid + '_' + scope;
-          detailRows = `<div id="${scopeUid}_detail" style="display:none;padding:8px 14px;background:#f9fafb">
-            <div style="display:grid;grid-template-columns:28px 1fr 1fr 28px 28px;gap:4px;padding-bottom:4px;border-bottom:2px solid var(--light-gray);font-size:calc(10px * var(--scale));font-weight:700;color:var(--mid-gray)">
-              <span>HOLE</span><span>TEAM A</span><span>TEAM B</span><span style="text-align:center">H</span><span style="text-align:center">RUN</span>
+          // Header press labels: P1, P2, etc.
+          const pressHeaders = scopePresses.map((p, i) =>
+            `<span style="text-align:center">P${i+1}</span>`
+          ).join('');
+          detailRows = `<div id="${scopeUid}_detail" style="display:none;padding:8px 14px;background:#f9fafb;overflow-x:auto">
+            <div style="display:grid;grid-template-columns:${gridCols};gap:4px;padding-bottom:4px;border-bottom:2px solid var(--light-gray);font-size:calc(10px * var(--scale));font-weight:700;color:var(--mid-gray)">
+              <span>HOLE</span><span>TEAM A</span><span>TEAM B</span><span style="text-align:center">H</span><span style="text-align:center">BASE</span>${pressHeaders}
             </div>
             ${rows}
           </div>`;
