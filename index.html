@@ -1592,7 +1592,7 @@ const bbInfo = (players, h) => {
             <span style="color:var(--dark);font-weight:600">${aName} <span style="color:var(--gray);font-weight:600;font-size:calc(13px * var(--scale))">${aInfo.score}</span>${aDot ? '<span style="color:#2d6a4f;font-size:calc(13px * var(--scale));font-weight:900;vertical-align:middle;margin-left:1px">●</span>' : ''}</span>
             <span style="color:var(--dark);font-weight:600">${bName} <span style="color:var(--gray);font-weight:600;font-size:calc(13px * var(--scale))">${bInfo.score}</span>${bDot ? '<span style="color:#2d6a4f;font-size:calc(13px * var(--scale));font-weight:900;vertical-align:middle;margin-left:1px">●</span>' : ''}</span>
             <span style="color:${hCol};font-weight:700;text-align:center">${diffStr}</span>
-            <span style="color:${runCol};font-weight:700;text-align:center">${runStr}</span>
+            <span style="color:${runCol};font-weight:700;text-align:center;border-left:2px solid var(--light-gray);padding-left:4px">${runStr}</span>
             ${pressCells}
           </div>`;
         }
@@ -1604,7 +1604,7 @@ const bbInfo = (players, h) => {
           ).join('');
           detailRows = `<div id="${scopeUid}_detail" style="display:none;padding:8px 14px;background:#f9fafb;overflow-x:auto">
             <div style="display:grid;grid-template-columns:${gridCols};gap:4px;padding-bottom:4px;border-bottom:2px solid var(--light-gray);font-size:calc(10px * var(--scale));font-weight:700;color:var(--mid-gray)">
-              <span>HOLE</span><span>TEAM A</span><span>TEAM B</span><span style="text-align:center">H</span><span style="text-align:center">BASE</span>${pressHeaders}
+              <span>HOLE</span><span>TEAM A</span><span>TEAM B</span><span style="text-align:center">H</span><span style="text-align:center;border-left:2px solid var(--light-gray);padding-left:4px">O</span>${pressHeaders}
             </div>
             ${rows}
           </div>`;
