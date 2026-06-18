@@ -754,6 +754,20 @@
       <button class="btn btn-primary btn-sm" onclick="saveGGPortalPrefix()">💾 Save Prefix</button>
     </div>
 
+    <div class="card">
+      <div class="card-title">Stroke Index Override</div>
+      <div style="font-size:calc(12px * var(--scale));color:var(--gray);margin-bottom:10px">Override the default Crown Colony stroke index for a guest course. Enter 18 comma-separated values matching holes 1–18. Clear to return to Crown Colony defaults.</div>
+      <span class="field-label mt-0">Active Course</span>
+      <div id="si-active-course" style="font-size:calc(12px * var(--scale));color:var(--mid-gray);margin-bottom:8px;padding:6px 10px;background:var(--light-gray);border-radius:8px">Loading...</div>
+      <span class="field-label">SI Values (holes 1–18, comma-separated)</span>
+      <input type="text" id="si-override-input" placeholder="e.g. 16,10,8,12,14,2,18,6,4,1,15,3,7,13,9,11,17,5" style="font-family:monospace;font-size:calc(12px * var(--scale))">
+      <div id="si-override-error" style="display:none;color:#ef4444;font-size:calc(11px * var(--scale));margin-top:4px"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-primary btn-sm" onclick="saveStrokeIndexOverride()" style="flex:1">💾 Save Override</button>
+        <button class="btn btn-outline btn-sm" onclick="clearStrokeIndexOverride()" style="flex:1">↩ Reset to CC</button>
+      </div>
+    </div>
+
     <!-- ══════════════════════════════════════ -->
     <!-- SECTION 5: BETS LIST (bottom)         -->
     <!-- ══════════════════════════════════════ -->
@@ -1137,6 +1151,11 @@ function openAdminScreen() {
   const fmtSel = document.getElementById('round-format-select');
   if (fmtSel) fmtSel.value = roundFormat || 'nassau';
   Promise.resolve({value:(window._config&&window._config['skins_buyin']!==undefined&&window._config['skins_buyin']!=='')?window._config['skins_buyin']:'10'}).then(d=>{document.getElementById('skins-buyin').value=d.value||'10';}).catch(()=>{});
+  // Populate stroke index override field
+  const siVal = (window._config && window._config['stroke_index_override']) || '';
+  const siInput = document.getElementById('si-override-input');
+  if (siInput) siInput.value = siVal;
+  updateSIActiveCourse(siVal);
 }
 function sendGroupMeNotification(fnName) {
   const labels = {
@@ -1536,24 +1555,8 @@ const bbInfo = (players, h) => {
   };
 };
 
-        // Collect presses for this scope — sorted by startHole
-        const scopePresses = scopeBets
-          .filter(b => b.parentId && b.scope === scope)
-          .sort((a, b) => a.startHole - b.startHole);
-        const numPresses = scopePresses.length;
-
-        // Initialize running totals: one for base + one per press
-        let runDiff = 0;
-        const pressRun = scopePresses.map(() => null); // null = not started yet
-
-        // Grid columns: HOLE | TEAM A | TEAM B | H | BASE | P1 | P2 | ...
-        const pressCols = numPresses > 0 ? (' 28px'.repeat(numPresses)) : '';
-        const gridCols = `28px 1fr 1fr 28px 28px${pressCols}`;
-
-        const fmtRun = v => v === null ? '' : v > 0 ? '+'+v : v === 0 ? 'E' : ''+v;
-        const runColFn = v => v === null ? 'transparent' : v > 0 ? '#16a34a' : v < 0 ? '#ef4444' : 'var(--mid-gray)';
-
         let rows = '';
+        let runDiff = 0;
         for (let h = startH; h < Math.min(endH, maxThru); h++) {
           const hole = h + 1;
           const aInfo = bbInfo(teamsAArr, h);
@@ -1561,50 +1564,28 @@ const bbInfo = (players, h) => {
           if (aInfo.score === null || bInfo.score === null) break;
           const hd_val = bInfo.score - aInfo.score;
           runDiff += hd_val;
-
-          // Update each press running total if this hole is in its range
-          scopePresses.forEach((p, i) => {
-            if (hole >= p.startHole) {
-              if (pressRun[i] === null) pressRun[i] = 0;
-              pressRun[i] += hd_val;
-            }
-          });
-
           const hCol = hd_val > 0 ? '#16a34a' : hd_val < 0 ? '#ef4444' : 'var(--mid-gray)';
           const diffStr = hd_val > 0 ? '+'+hd_val : hd_val === 0 ? 'E' : ''+hd_val;
           const aName = aInfo.player || '—';
           const bName = bInfo.player || '—';
+          // Dot: show when best ball player received a stroke
           const aDot = aInfo.anyPopped;
           const bDot = bInfo.anyPopped;
           const runCol = runDiff > 0 ? '#16a34a' : runDiff < 0 ? '#ef4444' : 'var(--mid-gray)';
-          const runStr = fmtRun(runDiff);
-
-          // Press columns for this row
-          const pressCells = scopePresses.map((p, i) => {
-            const v = pressRun[i];
-            const col = runColFn(v);
-            const str = fmtRun(v);
-            return `<span style="color:${col};font-weight:700;text-align:center;font-size:calc(11px * var(--scale))">${str}</span>`;
-          }).join('');
-
-          rows += `<div style="display:grid;grid-template-columns:${gridCols};gap:4px;align-items:center;padding:3px 0;border-bottom:1px solid var(--light-gray);font-size:calc(11px * var(--scale))">
+          const runStr = runDiff > 0 ? '+'+runDiff : runDiff === 0 ? 'E' : ''+runDiff;
+          rows += `<div style="display:grid;grid-template-columns:28px 1fr 1fr 28px 28px;gap:4px;align-items:center;padding:3px 0;border-bottom:1px solid var(--light-gray);font-size:calc(11px * var(--scale))">
             <span style="color:var(--mid-gray);font-weight:600">h${hole}</span>
             <span style="color:var(--dark);font-weight:600">${aName} <span style="color:var(--gray);font-weight:600;font-size:calc(13px * var(--scale))">${aInfo.score}</span>${aDot ? '<span style="color:#2d6a4f;font-size:calc(13px * var(--scale));font-weight:900;vertical-align:middle;margin-left:1px">●</span>' : ''}</span>
             <span style="color:var(--dark);font-weight:600">${bName} <span style="color:var(--gray);font-weight:600;font-size:calc(13px * var(--scale))">${bInfo.score}</span>${bDot ? '<span style="color:#2d6a4f;font-size:calc(13px * var(--scale));font-weight:900;vertical-align:middle;margin-left:1px">●</span>' : ''}</span>
             <span style="color:${hCol};font-weight:700;text-align:center">${diffStr}</span>
-            <span style="color:${runCol};font-weight:700;text-align:center;border-left:2px solid var(--light-gray);padding-left:4px">${runStr}</span>
-            ${pressCells}
+            <span style="color:${runCol};font-weight:700;text-align:center">${runStr}</span>
           </div>`;
         }
         if (rows) {
           const scopeUid = uid + '_' + scope;
-          // Header press labels: P1, P2, etc.
-          const pressHeaders = scopePresses.map((p, i) =>
-            `<span style="text-align:center">P${i+1}</span>`
-          ).join('');
-          detailRows = `<div id="${scopeUid}_detail" style="display:none;padding:8px 14px;background:#f9fafb;overflow-x:auto">
-            <div style="display:grid;grid-template-columns:${gridCols};gap:4px;padding-bottom:4px;border-bottom:2px solid var(--light-gray);font-size:calc(10px * var(--scale));font-weight:700;color:var(--mid-gray)">
-              <span>HOLE</span><span>TEAM A</span><span>TEAM B</span><span style="text-align:center">H</span><span style="text-align:center;border-left:2px solid var(--light-gray);padding-left:4px">O</span>${pressHeaders}
+          detailRows = `<div id="${scopeUid}_detail" style="display:none;padding:8px 14px;background:#f9fafb">
+            <div style="display:grid;grid-template-columns:28px 1fr 1fr 28px 28px;gap:4px;padding-bottom:4px;border-bottom:2px solid var(--light-gray);font-size:calc(10px * var(--scale));font-weight:700;color:var(--mid-gray)">
+              <span>HOLE</span><span>TEAM A</span><span>TEAM B</span><span style="text-align:center">H</span><span style="text-align:center">RUN</span>
             </div>
             ${rows}
           </div>`;
@@ -4465,6 +4446,52 @@ async function unlockRound() {
 }
 
 async function saveSkinsBuyin(){const val=document.getElementById('skins-buyin').value;localStorage.setItem('skins_buyin',val);try{await callScript('setConfig',{key:'skins_buyin',value:val});}catch(e){}showToast('Buy-in saved for all users','success');}
+
+async function saveStrokeIndexOverride() {
+  const raw = (document.getElementById('si-override-input').value || '').trim();
+  const errEl = document.getElementById('si-override-error');
+  errEl.style.display = 'none';
+  if (!raw) { clearStrokeIndexOverride(); return; }
+  const arr = raw.split(',').map(v => parseInt(v.trim()));
+  if (arr.length !== 18 || arr.some(v => isNaN(v) || v < 1 || v > 18)) {
+    errEl.textContent = 'Must be exactly 18 values, each between 1 and 18.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const dupes = arr.length !== new Set(arr).size;
+  if (dupes) {
+    errEl.textContent = 'Values must be unique (1–18, no duplicates).';
+    errEl.style.display = 'block';
+    return;
+  }
+  try {
+    await callScript('setConfig', {key: 'stroke_index_override', value: raw});
+    updateSIActiveCourse(raw);
+    showToast('Stroke index override saved', 'success');
+  } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
+}
+
+async function clearStrokeIndexOverride() {
+  try {
+    await callScript('setConfig', {key: 'stroke_index_override', value: ''});
+    document.getElementById('si-override-input').value = '';
+    document.getElementById('si-override-error').style.display = 'none';
+    updateSIActiveCourse('');
+    showToast('Reset to Crown Colony stroke index', 'success');
+  } catch(e) { showToast('Reset failed: ' + e.message, 'error'); }
+}
+
+function updateSIActiveCourse(val) {
+  const el = document.getElementById('si-active-course');
+  if (!el) return;
+  if (val && val.trim()) {
+    el.textContent = '⚠️ Override active — guest course SI in use';
+    el.style.color = '#ea580c';
+  } else {
+    el.textContent = '✅ Crown Colony (default)';
+    el.style.color = 'var(--green-dark)';
+  }
+}
 
 // ── TEXT SIZE ──
 function setSize(size) {
