@@ -755,6 +755,19 @@
     </div>
 
     <div class="card">
+      <div class="card-title">Guest Course GG Event</div>
+      <div style="font-size:calc(12px * var(--scale));color:var(--gray);margin-bottom:10px">Override the GolfGenius Event ID for a round at a guest course. WagerCaddie will pull scores from that event instead of Crown Colony. Clear to return to Crown Colony.</div>
+      <span class="field-label mt-0">Active GG Event</span>
+      <div id="eid-active-course" style="font-size:calc(12px * var(--scale));color:var(--mid-gray);margin-bottom:8px;padding:6px 10px;background:var(--light-gray);border-radius:8px">Loading...</div>
+      <span class="field-label">GG Event ID</span>
+      <input type="text" id="event-id-override-input" placeholder="e.g. 12809501639798963716" style="font-family:monospace;font-size:calc(12px * var(--scale))">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-primary btn-sm" onclick="saveEventIdOverride()" style="flex:1">💾 Save Event ID</button>
+        <button class="btn btn-outline btn-sm" onclick="clearEventIdOverride()" style="flex:1">↩ Reset to CC</button>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="card-title">Stroke Index Override</div>
       <div style="font-size:calc(12px * var(--scale));color:var(--gray);margin-bottom:10px">Override the default Crown Colony stroke index for a guest course. Enter 18 comma-separated values matching holes 1–18. Clear to return to Crown Colony defaults.</div>
       <span class="field-label mt-0">Active Course</span>
@@ -1156,6 +1169,11 @@ function openAdminScreen() {
   const siInput = document.getElementById('si-override-input');
   if (siInput) siInput.value = siVal;
   updateSIActiveCourse(siVal);
+  // Populate event ID override field
+  const eidVal = (window._config && window._config['event_id_override']) || '';
+  const eidInput = document.getElementById('event-id-override-input');
+  if (eidInput) eidInput.value = eidVal;
+  updateEIDActiveCourse(eidVal);
 }
 function sendGroupMeNotification(fnName) {
   const labels = {
@@ -4486,6 +4504,41 @@ function updateSIActiveCourse(val) {
   if (!el) return;
   if (val && val.trim()) {
     el.textContent = '⚠️ Override active — guest course SI in use';
+    el.style.color = '#ea580c';
+  } else {
+    el.textContent = '✅ Crown Colony (default)';
+    el.style.color = 'var(--green-dark)';
+  }
+}
+
+async function saveEventIdOverride() {
+  const raw = (document.getElementById('event-id-override-input').value || '').trim();
+  if (!raw) { clearEventIdOverride(); return; }
+  if (!/^\d{15,20}$/.test(raw)) {
+    showToast('Event ID should be a numeric GolfGenius ID (15–20 digits)', 'error');
+    return;
+  }
+  try {
+    await callScript('setConfig', {key: 'event_id_override', value: raw});
+    updateEIDActiveCourse(raw);
+    showToast('GG Event ID override saved', 'success');
+  } catch(e) { showToast('Save failed: ' + e.message, 'error'); }
+}
+
+async function clearEventIdOverride() {
+  try {
+    await callScript('setConfig', {key: 'event_id_override', value: ''});
+    document.getElementById('event-id-override-input').value = '';
+    updateEIDActiveCourse('');
+    showToast('Reset to Crown Colony GG event', 'success');
+  } catch(e) { showToast('Reset failed: ' + e.message, 'error'); }
+}
+
+function updateEIDActiveCourse(val) {
+  const el = document.getElementById('eid-active-course');
+  if (!el) return;
+  if (val && val.trim()) {
+    el.textContent = '⚠️ Override active — guest event ID: ' + val;
     el.style.color = '#ea580c';
   } else {
     el.textContent = '✅ Crown Colony (default)';
